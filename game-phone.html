@@ -28,7 +28,23 @@ var H={'Content-Type':'application/json','ngrok-skip-browser-warning':'true'};
 var phoneColor='#000000',isDrawing=false,canvas,ctx,phoneWord='',selectedVote=null,roundVoted=false;
 var chainPlayers=[],chainStep=0,currentTurn=false;
 
-async function loadGame(){try{var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});var s=await r.json();phoneWord=s.phone_word||'Кот-программист';var chain=s.phone_chain||{};chainPlayers=chain.players||[];chainStep=chain.step||0;updateTurn();}catch(e){phoneWord='Кот-программист';showScreen('phone-draw');document.getElementById('phone-prompt').textContent='Нарисуй: «'+phoneWord+'»';currentTurn=true;}initCanvas();}
+async function loadGame(){
+    try{
+        var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});
+        var s=await r.json();
+        phoneWord=s.phone_word||'Кот-программист';
+        var chain=s.phone_chain||{};
+        chainPlayers=chain.players||[];
+        chainStep=chain.step||0;
+        updateTurn();
+    }catch(e){
+        phoneWord='Кот-программист';
+        showScreen('phone-draw');
+        document.getElementById('phone-prompt').textContent='Нарисуй: «'+phoneWord+'»';
+        currentTurn=true;
+    }
+    initCanvas();
+}
 function updateTurn(){if(chainStep>=chainPlayers.length){renderVoteList();showScreen('vote');return;}var currentPlayer=chainPlayers[chainStep];if(currentPlayer===myId){if(chainStep%2===0){var promptText=chainStep===0?'Нарисуй: «'+phoneWord+'»':'Загрузка описания...';document.getElementById('phone-prompt').textContent=promptText;if(chainStep>0){fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}}).then(function(r){return r.json();}).then(function(s){var chain=s.phone_chain||{};var prevText=chain.texts?.[chainStep-1]||'то, что описано';document.getElementById('phone-prompt').textContent='Нарисуй: «'+prevText+'»';});}showScreen('phone-draw');currentTurn=true;}else{fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}}).then(function(r){return r.json();}).then(function(s){var chain=s.phone_chain||{};var prevDrawing=chain.drawings?.[chainStep-1]||'';document.getElementById('text-drawing-preview').src=prevDrawing;showScreen('phone-text');});}}else{var name='Игрок '+(chainStep+1);fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}}).then(function(r){return r.json();}).then(function(s){var pl=s.players?.[currentPlayer];if(pl)name=pl.username||name;document.getElementById('waiting-text').textContent='Ожидаем хода: '+name;});showScreen('waiting');setTimeout(pollChain,2000);}}
 function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
