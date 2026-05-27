@@ -1,104 +1,114 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="telegram-web-app" content="yes">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <title>Prickly Fuss 🦔</title><link rel="icon" type="image/jpeg" href="LogoGame.jpg"><link rel="stylesheet" href="shared.css">
-    <style>#game-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;display:none;background:var(--paper)}#game-container.active{display:block}#game-frame{width:100%;height:100%;border:none}.countdown-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:600;display:none;justify-content:center;align-items:center;flex-direction:column}.countdown-overlay.active{display:flex}.countdown-number{font-family:var(--title);font-size:100px;color:var(--yellow);text-shadow:0 0 40px rgba(255,235,59,0.8);animation:pulse 1s ease}.countdown-text{font-family:var(--marker);font-size:24px;color:white;margin-top:20px}@keyframes pulse{0%{transform:scale(1.3);opacity:0}50%{transform:scale(1);opacity:1}100%{transform:scale(0.9);opacity:0.5}}</style>
+    <title>Prickly Fuss 🦔</title>
+    <link rel="icon" type="image/jpeg" href="LogoGame.jpg">
+    <link rel="stylesheet" href="shared.css">
+    <style>#game-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;display:none;background:var(--paper)}#game-container.active{display:block}#game-frame{width:100%;height:100%;border:none}</style>
 </head>
 <body>
 <div class="phone-frame" id="app">
     <div class="splash-overlay" id="splashScreen"><img src="LogoGame.jpg" alt="Prickly Fuss" class="splash-logo" id="splashLogo"><div class="splash-progress"><div class="splash-progress-fill"></div></div></div>
-    <div class="slot-machine-overlay" id="slotMachine"><div class="slot-arrow-top">▼</div><div class="slot-window" id="slotWindow"><div class="slot-pointer"></div><div class="slot-reel" id="slotReel"></div></div><div class="slot-arrow-bottom">▲</div></div>
     <div class="header"><span class="logo">🦔 Prickly Fuss</span><span class="round-badge" id="round-badge">Раунд 1/3</span></div>
     <div class="toast" id="toast"></div>
     <div id="game-container"><iframe id="game-frame" src="" allow="camera;microphone"></iframe></div>
     <div class="content" id="content">
-        <div class="screen active" id="screen-enter"><h1>🦔</h1><h2>Prickly Fuss</h2><p class="subtitle">Колючая суета начинается!</p><button class="btn btn-primary btn-arial" onclick="enterGame()">🎮 ЗАЙТИ В ИГРУ</button></div>
-        <div class="screen" id="screen-lobby"><h1>👥</h1><h2>Ожидание игроков</h2><p class="doodle-text" id="lobby-count">0/8 готовы</p><div class="player-list" id="player-list"></div><button class="btn btn-primary btn-arial" id="btn-start-game" disabled onclick="startSlotMachine()">▶ ИГРАТЬ (минимум 3)</button><p class="warning-text" id="min-players-warning">⚠ Нужно хотя бы 3 игрока</p></div>
-        <div class="screen" id="screen-scoreboard"><h1>📊</h1><h2>Турнирная таблица</h2><div id="scoreboard-content" style="width:100%;text-align:left;"></div></div>
+        <div class="screen active" id="screen-enter"><h1>🦔</h1><h2>Prickly Fuss</h2><p>Колючая суета начинается!</p><button class="btn btn-primary btn-arial" onclick="enterGame()">🎮 ЗАЙТИ В ИГРУ</button></div>
+        <div class="screen" id="screen-lobby"><h1>👥</h1><h2>Ожидание игроков</h2><p class="doodle-text" id="lobby-count">0/8 готовы</p><div class="player-list" id="player-list"></div><button class="btn btn-primary btn-arial" id="btn-start-game" disabled onclick="startSlotMachine()">▶ ИГРАТЬ (минимум 3)</button></div>
+        <div class="screen" id="screen-scoreboard"><h1>📊</h1><h2>Турнирная таблица</h2><div id="scoreboard-content"></div></div>
     </div>
 </div>
-<div class="countdown-overlay" id="countdownOverlay"><div class="countdown-number" id="countdownNumber">3</div><div class="countdown-text">Запуск игры...</div></div>
-<div class="avatar-modal" id="avatarModal"><h2 style="color:white;font-family:var(--marker);">📸 Сделай селфи!</h2><p style="color:#ccc;font-family:Arial;">Твоя аватарка для игры</p><div class="avatar-circle" id="avatarCircle" onclick="document.getElementById('avatar-camera-input').click()">📷</div><input type="file" id="avatar-camera-input" accept="image/*" capture="environment" onchange="handleAvatarUpload(event)" style="display:none;"><button class="btn btn-primary btn-arial" onclick="confirmAvatar()">✅ Сохранить</button></div>
+<div class="avatar-modal" id="avatarModal"><h2 style="color:white;">📸 Сделай селфи!</h2><div class="avatar-circle" id="avatarCircle" onclick="document.getElementById('avatar-camera-input').click()">📷</div><input type="file" id="avatar-camera-input" accept="image/*" capture="environment" onchange="handleAvatarUpload(event)" style="display:none;"><button class="btn btn-primary btn-arial" onclick="confirmAvatar()">✅ Сохранить</button></div>
 <script>
-var urlParams=new URLSearchParams(window.location.search),playerName=urlParams.get('name')||null,myUserId,myUsername,myAvatarData=null;
+var myUserId, myUsername, myAvatarData=null;
+var SRV='https://regroup-lucid-bronco.ngrok-free.dev', SID='test-session';
+var gameStarted=false, lobbyPollInterval=null;
 
-// Пробуем восстановить из sessionStorage
-var savedUserId = sessionStorage.getItem('user_id');
-var savedUsername = sessionStorage.getItem('username');
+sessionStorage.setItem('server_url',SRV);
+sessionStorage.setItem('session_id',SID);
 
-if (savedUserId && savedUsername) {
-    myUserId = savedUserId;
-    myUsername = savedUsername;
-} else if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-    var user = window.Telegram.WebApp.initDataUnsafe.user;
-    myUsername = user.first_name || user.username || 'Игрок';
-    myUserId = 'tg_' + user.id;
-    sessionStorage.setItem('user_id', myUserId);
-    sessionStorage.setItem('username', myUsername);
-} else {
-    myUsername = playerName || prompt('Введи имя', 'Игрок') || 'Игрок';
-    myUserId = 'player_' + myUsername.toLowerCase().replace(/\s/g, '_');
-    sessionStorage.setItem('user_id', myUserId);
-    sessionStorage.setItem('username', myUsername);
+if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initDataUnsafe&&window.Telegram.WebApp.initDataUnsafe.user){
+    var user=window.Telegram.WebApp.initDataUnsafe.user;
+    myUsername=user.first_name||user.username||'Игрок';
+    myUserId='tg_'+user.id;
+}else{
+    myUsername=prompt('Введи имя','Игрок')||'Игрок';
+    myUserId='player_'+myUsername.toLowerCase().replace(/\s/g,'_');
 }
-var SRV='https://regroup-lucid-bronco.ngrok-free.dev',SID='test-session',currentRound=1,TOTAL_ROUNDS=3,selectedGames=[],currentGameIndex=0,gameScores={},lobbyPollInterval=null,slotMachineShown=false,gameStarted=false,countdownActive=false;
-sessionStorage.setItem('server_url',SRV);sessionStorage.setItem('session_id',SID);sessionStorage.setItem('user_id',myUserId);sessionStorage.setItem('username',myUsername);
-var allGames=[{id:'photo',name:'📸 Фото-задание',file:'game-photo.html'},{id:'draw',name:'🎨 Дорисуй друга',file:'game-draw.html'},{id:'meme',name:'🎭 Мем-баттл',file:'game-meme.html'},{id:'who',name:'❓ Кто это написал?',file:'game-who.html'},{id:'rating',name:'📊 Рейтинг',file:'game-rating.html'},{id:'truth',name:'🎯 Правда или действие',file:'game-truth.html'},{id:'assoc',name:'💭 Ассоциации',file:'game-assoc.html'},{id:'phone',name:'📞 Испорченный телефон',file:'game-phone.html'}];
-function pickRandomGames(){var s=allGames.slice().sort(function(){return Math.random()-0.5}),u=[],seen={};for(var i=0;i<s.length;i++){if(!seen[s[i].id]){seen[s[i].id]=true;u.push(s[i]);}if(u.length===3)break;}return u;}
-async function joinServer(){var d={user_id:myUserId,username:myUsername,session_id:SID,avatar:myAvatarData};try{var r=await fetch(SRV+'/api/join',{method:'POST',headers:{'Content-Type':'application/json','ngrok-skip-browser-warning':'true'},body:JSON.stringify(d)});
-async function checkState(){try{var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});return await r.json();}catch(e){return{phase:'lobby',players_count:1};}}
-async function startOnServer(){try{var r=await fetch(SRV+'/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID})});return await r.json();}catch(e){return{status:'error'};}}
-async function resetGame(){try{await fetch(SRV+'/api/reset-game',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID})});}catch(e){}}
-window.addEventListener('DOMContentLoaded',function(){setTimeout(function(){document.getElementById('splashScreen').classList.add('hidden');showScreen('enter');},3000);updateScoreboard();});
-document.getElementById('splashLogo').onerror=function(){this.style.display='none';};
-function showScreen(id){document.querySelectorAll('#content .screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
-function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
-function exitGame(){if(window.Telegram&&window.Telegram.WebApp)window.Telegram.WebApp.close();else{window.close();}}
-function enterGame(){if(!myAvatarData){document.getElementById('avatarModal').classList.add('active');}else{showScreen('lobby');joinServer().then(function(){pollLobby();});}}
-function handleAvatarUpload(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){myAvatarData=ev.target.result;document.getElementById('avatarCircle').innerHTML='<img src="'+myAvatarData+'" alt="Аватар">';};r.readAsDataURL(f);}
-function confirmAvatar(){document.getElementById('avatarModal').classList.remove('active');sessionStorage.setItem('avatar',myAvatarData||'');showScreen('lobby');joinServer().then(function(){pollLobby();});}
-function stopPolling(){if(lobbyPollInterval){clearInterval(lobbyPollInterval);lobbyPollInterval=null;}}
-function pollLobby(){stopPolling();slotMachineShown=false;lobbyPollInterval=setInterval(async function(){var s=await checkState(),c=s.players_count||0;document.getElementById('lobby-count').textContent=c+'/8 готовы';var b=document.getElementById('btn-start-game'),w=document.getElementById('min-players-warning');if(c>=3&&!gameStarted){b.disabled=false;b.textContent='▶ ИГРАТЬ';w.style.display='none';}else if(!gameStarted){b.disabled=true;b.textContent='▶ ИГРАТЬ (нужно '+(3-c)+' ещё)';w.style.display='block';}
-if((s.phase==='starting'||s.phase==='slot')&&!slotMachineShown){slotMachineShown=true;stopPolling();gameStarted=true;var g=s.current_game||'photo';selectedGames=[{id:g,name:s.current_game_name||allGames.find(function(a){return a.id===g;})?.name||g,file:'game-'+g+'.html'}];currentRound=s.current_round||1;if(s.phase==='starting'){showCountdown(function(){showSlotMachine(selectedGames[0]);},10);}else{showCountdown(function(){showSlotMachine(selectedGames[0]);});}}
-if(s.phase==='finished'&&!slotMachineShown){slotMachineShown=true;stopPolling();fetchFinalScores();}},1500);}
-function startSlotMachine(){stopPolling();gameStarted=true;document.getElementById('btn-start-game').disabled=true;document.getElementById('btn-start-game').textContent='⏳ Запуск...';startOnServer().then(function(d){if(d.status==='ok'){pollLobby();}});}
-function showCountdown(callback,duration){if(countdownActive)return;countdownActive=true;var overlay=document.getElementById('countdownOverlay'),numEl=document.getElementById('countdownNumber');overlay.classList.add('active');var count=duration||3;numEl.textContent=count;numEl.style.animation='none';void numEl.offsetWidth;numEl.style.animation='pulse 1s ease';var iv=setInterval(function(){count--;if(count>0){numEl.textContent=count;numEl.style.animation='none';void numEl.offsetWidth;numEl.style.animation='pulse 1s ease';}else{clearInterval(iv);overlay.classList.remove('active');countdownActive=false;callback();}},1000);}
-function showSlotMachine(game){var overlay=document.getElementById('slotMachine'),reel=document.getElementById('slotReel'),slotWindow=document.getElementById('slotWindow');overlay.classList.add('active');slotWindow.classList.remove('win');var WINNER=game.name,allNames=[];for(var i=0;i<allGames.length;i++){allNames.push(allGames[i].name);}var ITEM_HEIGHT=40,reelItems=[];for(var i=0;i<40;i++){reelItems.push(allNames[Math.floor(Math.random()*allNames.length)]);}reelItems.push(WINNER);reelItems.push(allNames[Math.floor(Math.random()*allNames.length)]);reelItems.push(allNames[Math.floor(Math.random()*allNames.length)]);reel.innerHTML='';for(var i=0;i<reelItems.length;i++){reel.innerHTML+='<div class="slot-item">'+reelItems[i]+'</div>';}var totalItems=reelItems.length,totalHeight=totalItems*ITEM_HEIGHT,winnerIndex=totalItems-3,windowCenter=40,stopPosition=-(winnerIndex*ITEM_HEIGHT-windowCenter);reel.style.transform='translateY(0px)';reel.style.transition='none';requestAnimationFrame(function(){requestAnimationFrame(function(){var totalDuration=5000;reel.style.transition='transform '+totalDuration+'ms cubic-bezier(0.05,0.8,0.1,1)';reel.style.transform='translateY('+stopPosition+'px)';setTimeout(function(){var items=reel.querySelectorAll('.slot-item');for(var i=0;i<items.length;i++){items[i].classList.remove('winner');}if(items[winnerIndex]){items[winnerIndex].classList.add('winner');}slotWindow.classList.add('win');setTimeout(function(){overlay.classList.remove('active');reel.style.transition='none';loadGame(game);},2000);},totalDuration+200);});});}
-function loadGame(game){stopPolling();document.getElementById('round-badge').textContent='Раунд '+currentRound+'/'+TOTAL_ROUNDS;document.getElementById('game-container').classList.add('active');document.getElementById('game-frame').src=game.file;}
-window.addEventListener('message',function(e){
-    if(e.data.type==='game-complete'){
-        document.getElementById('game-container').classList.remove('active');document.getElementById('game-frame').src='';gameStarted=false;
-        fetch(SRV+'/api/vote-next-round',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID,user_id:myUserId})})
-        .then(function(r){return r.json();}).then(function(d){
-            if(d.phase==='finished'){stopPolling();fetchFinalScores();}
-            else if(d.phase==='slot'){slotMachineShown=false;pollLobby();}
-            else{
-                var waitingScreen=document.createElement('div');waitingScreen.className='screen active';waitingScreen.id='screen-waiting-next';waitingScreen.innerHTML='<h1>⏳</h1><h2>Ожидание игроков</h2><div class="progress-doodle"><div class="progress-fill" id="next-round-progress" style="width:0%;"></div></div><p style="font-family:var(--marker);font-size:14px;" id="next-round-text">Готово: 0/'+d.total+'</p>';
-                document.getElementById('content').appendChild(waitingScreen);
-                showScreen('waiting-next');
-                var ci=setInterval(function(){fetch(SRV+'/api/state?session_id='+SID).then(function(r){return r.json();}).then(function(s){
-                    var ready=s.next_round_votes?Object.keys(s.next_round_votes).length:0;var total=s.players_count||3;
-                    document.getElementById('next-round-progress').style.width=Math.round(ready/total*100)+'%';
-                    document.getElementById('next-round-text').textContent='Готово: '+ready+'/'+total;
-                    if(s.phase==='slot'||s.phase==='finished'){clearInterval(ci);var el=document.getElementById('screen-waiting-next');if(el)el.remove();if(s.phase==='finished')fetchFinalScores();else{slotMachineShown=false;pollLobby();}}
-                });},1000);
-            }
-        });
-    }
-    if(e.data.type==='go-lobby'){document.getElementById('game-container').classList.remove('active');document.getElementById('game-frame').src='';gameStarted=false;showScreen('lobby');pollLobby();}
+sessionStorage.setItem('user_id',myUserId);
+sessionStorage.setItem('username',myUsername);
+
+window.addEventListener('DOMContentLoaded',function(){
+    setTimeout(function(){
+        document.getElementById('splashScreen').classList.add('hidden');
+        showScreen('enter');
+    },3000);
 });
-async function fetchFinalScores(){
-    try{var r=await fetch(SRV+'/api/state?session_id='+SID);var s=await r.json();gameScores=s.scores||{};}catch(e){}
-    showScoreboard();
+
+function showScreen(id){
+    document.querySelectorAll('#content .screen').forEach(function(s){s.classList.remove('active');});
+    var t=document.getElementById('screen-'+id);
+    if(t)t.classList.add('active');
 }
-function newGame(){resetGame();gameScores={};currentRound=1;currentGameIndex=0;selectedGames=[];gameStarted=false;showScreen('lobby');pollLobby();}
-function showScoreboard(){document.getElementById('round-badge').textContent='Финал 🏆';updateScoreboard();showScreen('scoreboard');}
-function updateScoreboard(){var sorted=[];for(var p in gameScores){sorted.push([p,gameScores[p]]);}sorted.sort(function(a,b){return b[1]-a[1];});var medals=['🥇','🥈','🥉'],html='';if(sorted.length>0){for(var i=0;i<sorted.length;i++){html+='<p class="score-row" style="font-size:'+(i===0?'22px':'16px')+';margin:8px 0;font-family:var(--marker);">'+(medals[i]||'🔸')+' <b>'+sorted[i][0]+'</b> — '+sorted[i][1]+' очков '+(i===0?'👑':'')+'</p>';}}else{html='<p style="font-family:var(--marker);">Пока нет результатов</p>';}html+='<button class="btn btn-primary btn-arial" onclick="newGame()" style="margin-top:15px;">🔄 Новая игра</button><button class="btn btn-secondary btn-arial" onclick="exitGame()" style="margin-top:10px;">🚪 Выйти</button>';document.getElementById('scoreboard-content').innerHTML=html;}
+function showToast(m){
+    var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
+    setTimeout(function(){t.classList.remove('show');},2500);
+}
+function enterGame(){
+    if(!myAvatarData){document.getElementById('avatarModal').classList.add('active');}
+    else{showScreen('lobby');joinServer().then(function(){pollLobby();});}
+}
+function handleAvatarUpload(e){
+    var f=e.target.files[0];if(!f)return;
+    var r=new FileReader();
+    r.onload=function(ev){myAvatarData=ev.target.result;document.getElementById('avatarCircle').innerHTML='<img src="'+myAvatarData+'" alt="Аватар">';};
+    r.readAsDataURL(f);
+}
+function confirmAvatar(){
+    document.getElementById('avatarModal').classList.remove('active');
+    showScreen('lobby');joinServer().then(function(){pollLobby();});
+}
+
+async function joinServer(){
+    try{
+        var r=await fetch(SRV+'/api/join',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','ngrok-skip-browser-warning':'true'},
+            body:JSON.stringify({user_id:myUserId,username:myUsername,session_id:SID})
+        });
+        return await r.json();
+    }catch(e){return{status:'ok',players_count:1};}
+}
+
+async function checkState(){
+    try{
+        var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});
+        return await r.json();
+    }catch(e){return{phase:'lobby',players_count:1};}
+}
+
+function pollLobby(){
+    if(lobbyPollInterval)clearInterval(lobbyPollInterval);
+    lobbyPollInterval=setInterval(async function(){
+        var s=await checkState(),c=s.players_count||0;
+        document.getElementById('lobby-count').textContent=c+'/8 готовы';
+        var b=document.getElementById('btn-start-game');
+        if(c>=3&&!gameStarted){b.disabled=false;b.textContent='▶ ИГРАТЬ';}
+    },2000);
+}
+
+function startSlotMachine(){
+    gameStarted=true;
+    document.getElementById('btn-start-game').disabled=true;
+    document.getElementById('btn-start-game').textContent='Запуск...';
+    fetch(SRV+'/api/start',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','ngrok-skip-browser-warning':'true'},
+        body:JSON.stringify({session_id:SID})
+    }).then(function(r){return r.json();}).then(function(d){console.log('Игра запущена:',d);});
+}
 </script>
 </body>
 </html>
