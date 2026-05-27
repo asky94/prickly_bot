@@ -23,7 +23,22 @@ var myName=p.get('username')||'Игрок';
 var H={'Content-Type':'application/json','ngrok-skip-browser-warning':'true'};
 
 var allPlayers=[],criteria='щедрого',opposite='жадины',roundVoted=false;
-async function loadGame(){try{var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});var state=await r.json();allPlayers=[];for(var uid in state.players){allPlayers.push({id:uid,name:state.players[uid].username||uid,avatar:state.players[uid].avatar});}criteria=state.rating_criteria||'щедрого';opposite=criteria==='щедрого'?'жадины':'скучного';}catch(e){allPlayers=[{id:'p1',name:'Саша'},{id:'p2',name:'Маша'},{id:'p3',name:'Дима'}];}document.getElementById('rating-prompt').textContent='От самого '+criteria+' до самого '+opposite+':';renderList();}
+async function loadGame(){
+    try{
+        var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});
+        var state=await r.json();
+        allPlayers=[];
+        for(var uid in state.players){
+            allPlayers.push({id:uid,name:state.players[uid].username||uid,avatar:state.players[uid].avatar});
+        }
+        criteria=state.rating_criteria||'щедрого';
+        opposite=criteria==='щедрого'?'жадины':'скучного';
+    }catch(e){
+        allPlayers=[{id:'p1',name:'Саша'},{id:'p2',name:'Маша'},{id:'p3',name:'Дима'}];
+    }
+    document.getElementById('rating-prompt').textContent='От самого '+criteria+' до самого '+opposite+':';
+    renderList();
+}
 function renderList(){var list=document.getElementById('rating-list');list.innerHTML=allPlayers.map(function(p,i){var avatarHtml=p.avatar?'<img src="'+p.avatar+'" class="player-avatar-small" alt="'+p.name+'">':'<div class="player-avatar-small">'+(p.name||'?').substr(0,2).toUpperCase()+'</div>';return'<li class="draggable-item" data-index="'+i+'" data-id="'+p.id+'"><span class="rating-position">'+(i+1)+'</span><span class="drag-handle">⋮⋮</span>'+avatarHtml+'<span>'+p.name+'</span></li>';}).join('');setupDrag();}
 function setupDrag(){var list=document.getElementById('rating-list'),di=null,sy=0;list.querySelectorAll('.draggable-item').forEach(function(item){item.addEventListener('mousedown',function(e){di=item;sy=e.clientY;item.classList.add('moving');});item.addEventListener('touchstart',function(e){di=item;sy=e.touches[0].clientY;item.classList.add('moving');},{passive:false});});document.addEventListener('mousemove',function(e){if(!di)return;var diff=e.clientY-sy;if(Math.abs(diff)>20){swap(di,diff);sy=e.clientY;}});document.addEventListener('touchmove',function(e){if(!di)return;var diff=e.touches[0].clientY-sy;if(Math.abs(diff)>20){swap(di,diff);sy=e.touches[0].clientY;}},{passive:false});document.addEventListener('mouseup',function(){if(di){di.classList.remove('moving');di=null;}});document.addEventListener('touchend',function(){if(di){di.classList.remove('moving');di=null;}});}
 function swap(item,diff){var list=document.getElementById('rating-list'),items=[].slice.call(list.querySelectorAll('.draggable-item')),ci=items.indexOf(item),ti;if(diff>0&&ci<items.length-1)ti=ci+1;else if(diff<0&&ci>0)ti=ci-1;else return;var target=items[ti];if(diff>0)list.insertBefore(item,target.nextSibling);else list.insertBefore(item,target);var temp=allPlayers[ci];allPlayers[ci]=allPlayers[ti];allPlayers[ti]=temp;updatePositions();}
