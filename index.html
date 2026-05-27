@@ -25,13 +25,25 @@
 <div class="avatar-modal" id="avatarModal"><h2 style="color:white;font-family:var(--marker);">📸 Сделай селфи!</h2><p style="color:#ccc;font-family:Arial;">Твоя аватарка для игры</p><div class="avatar-circle" id="avatarCircle" onclick="document.getElementById('avatar-camera-input').click()">📷</div><input type="file" id="avatar-camera-input" accept="image/*" capture="environment" onchange="handleAvatarUpload(event)" style="display:none;"><button class="btn btn-primary btn-arial" onclick="confirmAvatar()">✅ Сохранить</button></div>
 <script>
 var urlParams=new URLSearchParams(window.location.search),playerName=urlParams.get('name')||null,myUserId,myUsername,myAvatarData=null;
-if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+
+// Пробуем восстановить из sessionStorage
+var savedUserId = sessionStorage.getItem('user_id');
+var savedUsername = sessionStorage.getItem('username');
+
+if (savedUserId && savedUsername) {
+    myUserId = savedUserId;
+    myUsername = savedUsername;
+} else if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
     var user = window.Telegram.WebApp.initDataUnsafe.user;
     myUsername = user.first_name || user.username || 'Игрок';
     myUserId = 'tg_' + user.id;
+    sessionStorage.setItem('user_id', myUserId);
+    sessionStorage.setItem('username', myUsername);
 } else {
     myUsername = playerName || prompt('Введи имя', 'Игрок') || 'Игрок';
     myUserId = 'player_' + myUsername.toLowerCase().replace(/\s/g, '_');
+    sessionStorage.setItem('user_id', myUserId);
+    sessionStorage.setItem('username', myUsername);
 }
 var SRV='https://regroup-lucid-bronco.ngrok-free.dev',SID='test-session',currentRound=1,TOTAL_ROUNDS=3,selectedGames=[],currentGameIndex=0,gameScores={},lobbyPollInterval=null,slotMachineShown=false,gameStarted=false,countdownActive=false;
 sessionStorage.setItem('server_url',SRV);sessionStorage.setItem('session_id',SID);sessionStorage.setItem('user_id',myUserId);sessionStorage.setItem('username',myUsername);
