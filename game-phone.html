@@ -3,65 +3,450 @@
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Испорченный телефон</title><link rel="stylesheet" href="shared.css">
-    <style>body{background:transparent;padding:0}.phone-frame{box-shadow:none;border:none;border-radius:0;min-height:auto;max-width:100%}.header{display:none}.content{padding:20px 15px;gap:12px}#phone-canvas{width:100%;height:auto;display:block;touch-action:none}.preview-img{width:100%;max-width:280px;border-radius:15px;border:var(--border);margin-bottom:10px}.chain-item{background:white;border:var(--border);border-radius:15px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;font-family:var(--marker);box-shadow:2px 2px 0 rgba(0,0,0,0.1)}.chain-arrow{font-size:24px;text-align:center;margin:5px 0}</style>
+    <style>
+        body{background:transparent;padding:0}
+        .phone-frame{box-shadow:none;border:none;border-radius:0;min-height:auto;max-width:100%}
+        .header{display:none}
+        .content{padding:20px 15px;gap:12px}
+        #phone-canvas{width:100%;height:auto;display:block;touch-action:none;border:var(--border);border-radius:15px;background:white}
+        .draw-tools{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+        .color-btn{width:40px;height:40px;border-radius:50%;border:3px solid var(--ink);cursor:pointer}
+        .color-btn.active{border-width:5px;transform:scale(1.1)}
+        .preview-img{width:100%;max-width:280px;border-radius:15px;border:var(--border);margin-bottom:10px}
+        .word-box{background:var(--yellow);padding:15px;border-radius:20px;margin:10px 0;text-align:center}
+    </style>
 </head>
 <body>
 <div class="phone-frame">
 <div class="toast" id="toast"></div>
 <div class="content">
-<div class="screen active" id="screen-phone-draw"><h1>📞</h1><h2>Испорченный телефон!</h2><p style="font-family:Arial,sans-serif;font-weight:900;" id="phone-prompt">Загрузка...</p><div class="draw-container"><canvas id="phone-canvas" width="320" height="320"></canvas></div><div class="draw-tools"><div class="color-btn active" style="background:#000" onclick="setColor('#000',this)"></div><div class="color-btn" style="background:#E63946" onclick="setColor('#E63946',this)"></div><div class="color-btn" style="background:#457B9D" onclick="setColor('#457B9D',this)"></div><button class="btn btn-small btn-arial" onclick="clearCanvas()">🗑 Очистить</button></div><button class="btn btn-primary btn-arial" onclick="submitDrawing()">✅ Отправить</button></div>
-<div class="screen" id="screen-waiting"><h1>⏳</h1><h2>Ожидание...</h2><p style="font-family:var(--marker);" id="waiting-text">Другие игроки выполняют ход</p></div>
-<div class="screen" id="screen-phone-text"><h1>💬</h1><h2>Опиши рисунок!</h2><img class="preview-img" id="text-drawing-preview" src="" alt="Рисунок"><input type="text" id="phone-text-input" placeholder="Что ты видишь на рисунке?" style="width:100%;padding:12px;font-family:var(--marker);font-size:16px;border-radius:10px;border:2px solid var(--ink);text-align:center;margin-bottom:10px;"><button class="btn btn-primary btn-arial" onclick="submitText()">📝 Отправить описание</button></div>
-<div class="screen" id="screen-vote"><h1>🗳</h1><h2>Самый смешной переход!</h2><div class="vote-grid" id="vote-grid"></div><button class="btn btn-primary btn-arial" onclick="submitVote()">✅ Голосовать</button></div>
-<div class="screen" id="screen-results"><h1>🏆</h1><h2>Результаты!</h2><div id="chain" style="width:100%;text-align:left;"></div><p style="font-family:var(--marker);margin-top:10px;">🏅 Самый смешной переход: <b id="winner-text">...</b></p><button class="btn btn-primary btn-arial" id="btn-finish" onclick="finishGame()">▶ Следующий раунд</button><button class="btn btn-secondary btn-arial" onclick="goToLobby()">← Назад в лобби</button></div>
+<div class="screen active" id="screen-phone-draw">
+    <h1>📞</h1>
+    <h2>Испорченный телефон!</h2>
+    <div class="word-box">
+        <p style="font-family:Arial,sans-serif;font-weight:900;font-size:18px;" id="phone-prompt">Загрузка...</p>
+    </div>
+    <div class="draw-container">
+        <canvas id="phone-canvas" width="320" height="320"></canvas>
+    </div>
+    <div class="draw-tools">
+        <div class="color-btn active" style="background:#000" onclick="setColor('#000',this)"></div>
+        <div class="color-btn" style="background:#E63946" onclick="setColor('#E63946',this)"></div>
+        <div class="color-btn" style="background:#457B9D" onclick="setColor('#457B9D',this)"></div>
+        <div class="color-btn" style="background:#F4A261" onclick="setColor('#F4A261',this)"></div>
+        <button class="btn btn-small btn-arial" onclick="clearCanvas()">🗑 Очистить</button>
+    </div>
+    <button class="btn btn-primary btn-arial" id="submit-btn" onclick="submitDrawing()">✅ Отправить</button>
+</div>
+<div class="screen" id="screen-phone-text">
+    <h1>💬</h1>
+    <h2>Опиши рисунок!</h2>
+    <img class="preview-img" id="text-drawing-preview" src="" alt="Рисунок">
+    <input type="text" id="phone-text-input" placeholder="Что ты видишь на рисунке?" style="width:100%;padding:12px;font-family:var(--marker);font-size:16px;border-radius:10px;border:2px solid var(--ink);text-align:center;margin-bottom:10px;" maxlength="100">
+    <button class="btn btn-primary btn-arial" id="text-submit-btn" onclick="submitText()">📝 Отправить описание</button>
+</div>
+<div class="screen" id="screen-waiting">
+    <h1>⏳</h1>
+    <h2>Ожидание...</h2>
+    <p style="font-family:var(--marker);" id="waiting-text">Другие игроки выполняют ход</p>
+</div>
+<div class="screen" id="screen-vote">
+    <h1>🗳</h1>
+    <h2>Самый смешной переход!</h2>
+    <div class="vote-grid" id="vote-grid"></div>
+    <button class="btn btn-primary btn-arial" id="vote-btn" onclick="submitVote()">✅ Голосовать</button>
+</div>
+<div class="screen" id="screen-results">
+    <h1>🏆</h1>
+    <h2>Результаты!</h2>
+    <div id="chain" style="width:100%;text-align:left;"></div>
+    <p style="font-family:var(--marker);margin-top:10px;">🏅 Самый смешной переход: <b id="winner-text">...</b></p>
+    <button class="btn btn-primary btn-arial" id="btn-finish" onclick="finishGame()">▶ Следующий раунд</button>
+    <button class="btn btn-secondary btn-arial" onclick="goToLobby()">← Назад в лобби</button>
 </div>
 </div>
-<div class="photo-modal" id="phone-modal"><img class="photo-modal-image" id="phone-modal-img" src="" alt="Переход"><div class="photo-modal-buttons"><div class="photo-modal-btn back" onclick="closePhonePreview()">↩ НАЗАД</div><div class="photo-modal-btn" onclick="confirmPhoneVote()">✅ ВЫБРАТЬ</div></div></div>
+</div>
+
 <script>
-var p=new URLSearchParams(window.location.search);
-var SRV=p.get('server_url')||'https://regroup-lucid-bronco.ngrok-free.dev';
-var SID=p.get('session_id')||'test-session';
-var myId=p.get('user_id')||'unknown';
-var myName=p.get('username')||'Игрок';
-var H={'Content-Type':'application/json','ngrok-skip-browser-warning':'true'};
+var p = new URLSearchParams(window.location.search);
+var SRV = p.get('server_url') || 'https://regroup-lucid-bronco.ngrok-free.dev';
+var SID = p.get('session_id') || 'test-session';
+var myId = p.get('user_id') || 'unknown';
+var myName = p.get('username') || 'Игрок';
+var H = {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true'};
 
-var phoneColor='#000000',isDrawing=false,canvas,ctx,phoneWord='',selectedVote=null,roundVoted=false;
-var chainPlayers=[],chainStep=0,currentTurn=false;
+var phoneColor = '#000000';
+var isDrawing = false;
+var canvas, ctx;
+var phoneWord = '';
+var selectedVote = null;
+var roundFinished = false;
+var waitingInterval = null;
+var currentTurn = false;
+var chainPlayers = [];
+var chainStep = 0;
 
-async function loadGame(){
-    try{
-        var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});
-        var s=await r.json();
-        phoneWord=s.phone_word||'Кот-программист';
-        var chain=s.phone_chain||{};
-        chainPlayers=chain.players||[];
-        chainStep=chain.step||0;
-        updateTurn();
-    }catch(e){
-        phoneWord='Кот-программист';
+async function loadGame() {
+    try {
+        var r = await fetch(SRV + '/api/state?session_id=' + SID, {
+            headers: {'ngrok-skip-browser-warning': 'true'}
+        });
+        var state = await r.json();
+        
+        phoneWord = state.phone_word || 'Кот-программист';
+        var chain = state.phone_chain || {};
+        chainPlayers = chain.players || [];
+        chainStep = chain.step || 0;
+        
+        // Проверяем, чей сейчас ход
+        if (chainStep < chainPlayers.length) {
+            var currentPlayerId = chainPlayers[chainStep];
+            currentTurn = (currentPlayerId === myId);
+            
+            if (currentTurn) {
+                if (chainStep === 0) {
+                    document.getElementById('phone-prompt').textContent = 'Нарисуй: «' + phoneWord + '»';
+                    showScreen('phone-draw');
+                    initCanvas();
+                } else {
+                    // Нужно получить предыдущий рисунок или текст
+                    showScreen('phone-draw');
+                    initCanvas();
+                    document.getElementById('phone-prompt').textContent = 'Нарисуй то, что описано...';
+                }
+            } else {
+                var playerName = state.players?.[currentPlayerId]?.username || 'Игрок';
+                document.getElementById('waiting-text').textContent = 'Ожидаем ход: ' + playerName;
+                showScreen('waiting');
+                startPolling();
+            }
+        } else {
+            // Голосование
+            renderVoteGrid();
+            showScreen('vote');
+        }
+    } catch(e) {
+        console.error('Load game error:', e);
+        phoneWord = 'Кот-программист';
+        currentTurn = true;
+        document.getElementById('phone-prompt').textContent = 'Нарисуй: «' + phoneWord + '»';
         showScreen('phone-draw');
-        document.getElementById('phone-prompt').textContent='Нарисуй: «'+phoneWord+'»';
-        currentTurn=true;
+        initCanvas();
     }
-    initCanvas();
 }
-function updateTurn(){if(chainStep>=chainPlayers.length){renderVoteList();showScreen('vote');return;}var currentPlayer=chainPlayers[chainStep];if(currentPlayer===myId){if(chainStep%2===0){var promptText=chainStep===0?'Нарисуй: «'+phoneWord+'»':'Загрузка описания...';document.getElementById('phone-prompt').textContent=promptText;if(chainStep>0){fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}}).then(function(r){return r.json();}).then(function(s){var chain=s.phone_chain||{};var prevText=chain.texts?.[chainStep-1]||'то, что описано';document.getElementById('phone-prompt').textContent='Нарисуй: «'+prevText+'»';});}showScreen('phone-draw');currentTurn=true;}else{fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}}).then(function(r){return r.json();}).then(function(s){var chain=s.phone_chain||{};var prevDrawing=chain.drawings?.[chainStep-1]||'';document.getElementById('text-drawing-preview').src=prevDrawing;showScreen('phone-text');});}}else{var name='Игрок '+(chainStep+1);fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}}).then(function(r){return r.json();}).then(function(s){var pl=s.players?.[currentPlayer];if(pl)name=pl.username||name;document.getElementById('waiting-text').textContent='Ожидаем хода: '+name;});showScreen('waiting');setTimeout(pollChain,2000);}}
-function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
-function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
-function goToLobby(){window.parent.postMessage({type:'go-lobby'},'*');}
-function initCanvas(){canvas=document.getElementById('phone-canvas');ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.strokeStyle=phoneColor;ctx.lineWidth=5;ctx.lineCap='round';canvas.addEventListener('mousedown',function(e){isDrawing=true;var p=getPos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});canvas.addEventListener('mousemove',function(e){if(!isDrawing)return;var p=getPos(e);ctx.lineTo(p.x,p.y);ctx.stroke();});canvas.addEventListener('mouseup',function(){isDrawing=false;});canvas.addEventListener('touchstart',function(e){e.preventDefault();isDrawing=true;var p=getPos(e.touches[0]);ctx.beginPath();ctx.moveTo(p.x,p.y);});canvas.addEventListener('touchmove',function(e){e.preventDefault();if(!isDrawing)return;var p=getPos(e.touches[0]);ctx.lineTo(p.x,p.y);ctx.stroke();});canvas.addEventListener('touchend',function(){isDrawing=false;});}
-function getPos(e){var r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*(canvas.width/r.width),y:(e.clientY-r.top)*(canvas.height/r.height)};}
-function setColor(c,b){phoneColor=c;document.querySelectorAll('.color-btn').forEach(function(b){b.classList.remove('active');});b.classList.add('active');if(ctx)ctx.strokeStyle=c;}
-function clearCanvas(){if(ctx){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);}}
-async function submitDrawing(){if(!currentTurn){showToast('⚠ Сейчас не твой ход!');return;}var img=canvas.toDataURL();await fetch(SRV+'/api/phone-submit',{method:'POST',headers:H,body:JSON.stringify({session_id:SID,user_id:myId,content:img,type:'draw'})});currentTurn=false;showScreen('waiting');document.getElementById('waiting-text').textContent='Рисунок отправлен!';pollChain();}
-async function submitText(){var text=document.getElementById('phone-text-input').value.trim();if(!text){showToast('⚠ Напиши описание!');return;}await fetch(SRV+'/api/phone-submit',{method:'POST',headers:H,body:JSON.stringify({session_id:SID,user_id:myId,content:text,type:'text'})});showScreen('waiting');document.getElementById('waiting-text').textContent='Описание отправлено!';pollChain();}
-function pollChain(){var iv=setInterval(async function(){var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});var s=await r.json();if(s.phase==='voting'){clearInterval(iv);renderVoteList();showScreen('vote');return;}var chain=s.phone_chain||{};var step=chain.step||0;var players=chain.players||[];if(step>=players.length){clearInterval(iv);renderVoteList();showScreen('vote');return;}if(step!==chainStep){chainStep=step;clearInterval(iv);updateTurn();}},2000);}
-function renderVoteList(){var list=document.getElementById('vote-grid');list.innerHTML='';fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}}).then(function(r){return r.json();}).then(function(s){var chain=s.phone_chain||{};var players=chain.players||[];var drawings=chain.drawings||{};var texts=chain.texts||{};for(var i=1;i<players.length;i++){var from=s.players?.[players[i-1]]?.username||('Игрок '+(i));var to=s.players?.[players[i]]?.username||('Игрок '+(i+1));var bg=['#FFD700','#FF6B6B','#6BCB77','#4D96FF'][i%4];var emoji=['😂','🤣','😱','🤪'][i%4];list.innerHTML+='<div class="vote-card" data-index="'+(i-1)+'" onclick="selectTransition('+(i-1)+',this)"><div style="width:100%;height:40px;background:'+bg+';border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:30px;">'+emoji+'</div><p style="font-family:var(--marker);font-size:12px;">'+from+' → '+to+'</p></div>';}});}
-function selectTransition(index,element){document.querySelectorAll('#vote-grid .vote-card').forEach(function(el){el.classList.remove('selected');});element.classList.add('selected');selectedVote=index;showToast('Выбран переход '+(index+1));}
-async function submitVote(){if(selectedVote===null){showToast('⚠ Выбери переход!');return;}var res=await fetch(SRV+'/api/vote',{method:'POST',headers:H,body:JSON.stringify({session_id:SID,user_id:myId,voted_for:selectedVote,game:'phone'})});var data=await res.json();if(data.status==='error'){showToast('⚠ '+data.message);return;}if(data.all_voted){showResults(data.winner_name);}else{showToast('✅ Выбор сделан! Ожидаем других...');var ci=setInterval(async function(){var sr=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});var s=await sr.json();if(s.all_voted||s.phase==='results'){clearInterval(ci);showResults(s.winner_name);}},1500);}}
-function showResults(winnerName){document.getElementById('winner-text').textContent=winnerName||'Игрок 1 → Игрок 2';showScreen('results');}
-function finishGame(){if(roundVoted)return;roundVoted=true;document.getElementById('btn-finish').disabled=true;document.getElementById('btn-finish').textContent='⏳ Ожидание...';var scores={};scores[myName]=2;window.parent.postMessage({type:'game-complete',scores:scores},'*');}
-window.addEventListener('DOMContentLoaded',function(){loadGame();});
+
+function startPolling() {
+    if (waitingInterval) clearInterval(waitingInterval);
+    
+    waitingInterval = setInterval(async function() {
+        try {
+            var res = await fetch(SRV + '/api/state?session_id=' + SID, {
+                headers: {'ngrok-skip-browser-warning': 'true'}
+            });
+            var state = await res.json();
+            
+            var chain = state.phone_chain || {};
+            var step = chain.step || 0;
+            
+            if (step !== chainStep) {
+                clearInterval(waitingInterval);
+                location.reload(); // Просто перезагружаем для простоты
+            }
+        } catch(e) { console.error('Poll error:', e); }
+    }, 2000);
+}
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(function(s) {
+        s.classList.remove('active');
+    });
+    var t = document.getElementById('screen-' + id);
+    if (t) {
+        t.classList.add('active', 'bounce-in');
+        setTimeout(function() { t.classList.remove('bounce-in'); }, 500);
+    }
+}
+
+function showToast(m) {
+    var t = document.getElementById('toast');
+    t.textContent = m;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+
+function goToLobby() {
+    if (waitingInterval) clearInterval(waitingInterval);
+    window.parent.postMessage({type: 'go-lobby'}, '*');
+}
+
+function initCanvas() {
+    canvas = document.getElementById('phone-canvas');
+    if (!canvas) return;
+    
+    ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = phoneColor;
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    
+    canvas.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        var touch = e.touches[0];
+        var pos = getPos(touch);
+        startDraw(pos);
+    });
+    canvas.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+        var touch = e.touches[0];
+        var pos = getPos(touch);
+        draw(pos);
+    });
+    canvas.addEventListener('touchend', stopDraw);
+}
+
+function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = canvas.width / rect.width;
+    var scaleY = canvas.height / rect.height;
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
+}
+
+function startDraw(pos) {
+    isDrawing = true;
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+}
+
+function draw(pos) {
+    if (!isDrawing) return;
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+}
+
+function stopDraw() {
+    isDrawing = false;
+}
+
+function setColor(c, btn) {
+    phoneColor = c;
+    document.querySelectorAll('.color-btn').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    btn.classList.add('active');
+    if (ctx) ctx.strokeStyle = c;
+}
+
+function clearCanvas() {
+    if (ctx) {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+async function submitDrawing() {
+    var submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Отправка...';
+    
+    var imgData = canvas.toDataURL();
+    
+    try {
+        var res = await fetch(SRV + '/api/phone-submit', {
+            method: 'POST',
+            headers: H,
+            body: JSON.stringify({
+                session_id: SID,
+                user_id: myId,
+                content: imgData,
+                type: 'draw'
+            })
+        });
+        var data = await res.json();
+        
+        if (data.status === 'ok') {
+            showToast('✅ Рисунок отправлен!');
+            showScreen('waiting');
+            document.getElementById('waiting-text').textContent = 'Ожидаем следующий ход...';
+            startPolling();
+        } else {
+            showToast('❌ Ошибка: ' + (data.message || ''));
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✅ Отправить';
+        }
+    } catch(e) {
+        console.error('Submit error:', e);
+        showToast('❌ Ошибка соединения');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✅ Отправить';
+    }
+}
+
+async function submitText() {
+    var text = document.getElementById('phone-text-input').value.trim();
+    if (!text) {
+        showToast('⚠ Напиши описание!');
+        return;
+    }
+    
+    var submitBtn = document.getElementById('text-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Отправка...';
+    
+    try {
+        var res = await fetch(SRV + '/api/phone-submit', {
+            method: 'POST',
+            headers: H,
+            body: JSON.stringify({
+                session_id: SID,
+                user_id: myId,
+                content: text,
+                type: 'text'
+            })
+        });
+        var data = await res.json();
+        
+        if (data.status === 'ok') {
+            showToast('✅ Описание отправлено!');
+            showScreen('waiting');
+            document.getElementById('waiting-text').textContent = 'Ожидаем следующий ход...';
+            startPolling();
+        } else {
+            showToast('❌ Ошибка');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '📝 Отправить описание';
+        }
+    } catch(e) {
+        console.error('Submit error:', e);
+        showToast('❌ Ошибка соединения');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '📝 Отправить описание';
+    }
+}
+
+function renderVoteGrid() {
+    var grid = document.getElementById('vote-grid');
+    grid.innerHTML = '';
+    
+    // Упрощённое голосование для телефона
+    for (var i = 1; i <= 3; i++) {
+        var card = document.createElement('div');
+        card.className = 'vote-card';
+        card.setAttribute('data-index', i);
+        card.innerHTML = '<div style="width:100%;height:60px;background:#FFD700;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:30px;">😂</div><p style="font-family:var(--marker);font-size:12px;">Переход ' + i + '</p>';
+        card.onclick = (function(idx) {
+            return function() { selectVote(idx); };
+        })(i);
+        grid.appendChild(card);
+    }
+}
+
+function selectVote(index) {
+    document.querySelectorAll('#vote-grid .vote-card').forEach(function(card) {
+        card.classList.remove('selected');
+    });
+    
+    var cards = document.querySelectorAll('#vote-grid .vote-card');
+    for (var i = 0; i < cards.length; i++) {
+        if (cards[i].getAttribute('data-index') == index) {
+            cards[i].classList.add('selected');
+            break;
+        }
+    }
+    
+    selectedVote = index;
+    showToast('✅ Выбран переход ' + index);
+}
+
+async function submitVote() {
+    if (selectedVote === null) {
+        showToast('⚠ Выбери переход!');
+        return;
+    }
+    
+    var voteBtn = document.getElementById('vote-btn');
+    voteBtn.disabled = true;
+    voteBtn.textContent = '⏳ Отправка...';
+    
+    try {
+        var res = await fetch(SRV + '/api/vote', {
+            method: 'POST',
+            headers: H,
+            body: JSON.stringify({
+                session_id: SID,
+                user_id: myId,
+                voted_for: selectedVote,
+                game: 'phone'
+            })
+        });
+        var data = await res.json();
+        
+        if (data.status === 'error') {
+            showToast('⚠ ' + (data.message || 'Ошибка'));
+            voteBtn.disabled = false;
+            voteBtn.textContent = '✅ Голосовать';
+            return;
+        }
+        
+        showToast('✅ Голос учтён!');
+        
+        if (data.all_voted) {
+            document.getElementById('winner-text').textContent = 'Переход ' + selectedVote;
+            showScreen('results');
+        } else {
+            voteBtn.textContent = '⏳ Ожидание...';
+            await waitForResults();
+        }
+    } catch(e) {
+        console.error('Vote error:', e);
+        showToast('❌ Ошибка');
+        voteBtn.disabled = false;
+        voteBtn.textContent = '✅ Голосовать';
+    }
+}
+
+async function waitForResults() {
+    var interval = setInterval(async function() {
+        try {
+            var res = await fetch(SRV + '/api/state?session_id=' + SID, {
+                headers: {'ngrok-skip-browser-warning': 'true'}
+            });
+            var state = await res.json();
+            
+            if (state.phase === 'results') {
+                clearInterval(interval);
+                document.getElementById('winner-text').textContent = 'Переход ' + (state.winner_name || '1');
+                showScreen('results');
+            }
+        } catch(e) { console.error('Results poll error:', e); }
+    }, 1500);
+}
+
+function finishGame() {
+    if (roundFinished) return;
+    roundFinished = true;
+    
+    var finishBtn = document.getElementById('btn-finish');
+    if (finishBtn) {
+        finishBtn.disabled = true;
+        finishBtn.textContent = '⏳ Ожидание...';
+    }
+    
+    var scores = {};
+    scores[myName] = 2;
+    window.parent.postMessage({type: 'game-complete', scores: scores}, '*');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+    loadGame();
+});
 </script>
 </body>
 </html>

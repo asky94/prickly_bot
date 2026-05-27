@@ -3,69 +3,521 @@
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Дорисуй друга</title><link rel="stylesheet" href="shared.css">
-    <style>body{background:transparent;padding:0}.phone-frame{box-shadow:none;border:none;border-radius:0;min-height:auto;max-width:100%}.header{display:none}.content{padding:20px 15px;gap:12px}#draw-canvas{width:100%;height:auto;display:block;touch-action:none}.vote-img{width:100%;height:200px;object-fit:cover;border-radius:10px;cursor:pointer}</style>
+    <style>
+        body{background:transparent;padding:0}
+        .phone-frame{box-shadow:none;border:none;border-radius:0;min-height:auto;max-width:100%}
+        .header{display:none}
+        .content{padding:20px 15px;gap:12px}
+        #draw-canvas{width:100%;height:auto;display:block;touch-action:none;border:var(--border);border-radius:15px;background:white}
+        .vote-img{width:100%;height:200px;object-fit:cover;border-radius:10px;cursor:pointer}
+        .draw-tools{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+        .color-btn{width:40px;height:40px;border-radius:50%;border:3px solid var(--ink);cursor:pointer}
+        .color-btn.active{border-width:5px;transform:scale(1.1)}
+        .task-text{background:var(--yellow);padding:8px 16px;border-radius:20px;margin-bottom:10px}
+    </style>
 </head>
 <body>
 <div class="phone-frame">
 <div class="toast" id="toast"></div>
 <div class="content">
-<div class="screen active" id="screen-draw-task"><h1>🎨</h1><h2>Дорисуй друга!</h2><p style="font-family:Arial,sans-serif;font-weight:900;" id="draw-task-text">Загрузка...</p><div class="draw-container"><canvas id="draw-canvas" width="320" height="320"></canvas></div><div class="draw-tools"><div class="color-btn active" style="background:#000" onclick="setColor('#000',this)"></div><div class="color-btn" style="background:#E63946" onclick="setColor('#E63946',this)"></div><div class="color-btn" style="background:#457B9D" onclick="setColor('#457B9D',this)"></div><div class="color-btn" style="background:#F4A261" onclick="setColor('#F4A261',this)"></div><button class="btn btn-small btn-arial" onclick="clearCanvas()">🗑 Очистить</button></div><button class="btn btn-primary btn-arial" onclick="submitDrawing()">✅ Готово</button></div>
-<div class="screen" id="screen-waiting"><h1>⏳</h1><h2>Ожидание...</h2><p style="font-family:var(--marker);">Другие игроки рисуют</p><div class="progress-doodle"><div class="progress-fill" id="waiting-progress" style="width:33%;"></div></div><p style="font-family:var(--marker);font-size:14px;" id="waiting-text">Готово: 1/3</p></div>
-<div class="screen" id="screen-vote"><h1>🗳</h1><h2>Чей рисунок смешнее?</h2><div class="vote-grid" id="vote-grid"></div><button class="btn btn-primary btn-arial" onclick="submitVote()">→ К результатам</button></div>
-<div class="screen" id="screen-results"><h1>🏆</h1><h2>Результаты!</h2><p style="font-family:var(--marker);">🥇 <b id="winner-name">...</b></p><div id="winner-drawing" style="text-align:center;margin-top:10px;"></div><button class="btn btn-primary btn-arial" id="btn-finish" onclick="finishGame()">▶ Следующий раунд</button><button class="btn btn-secondary btn-arial" onclick="goToLobby()">← Назад в лобби</button></div>
+<div class="screen active" id="screen-draw-task">
+    <h1>🎨</h1>
+    <h2>Дорисуй друга!</h2>
+    <p class="task-text" id="draw-task-text" style="font-family:Arial,sans-serif;font-weight:900;">Загрузка...</p>
+    <div class="draw-container">
+        <canvas id="draw-canvas" width="320" height="320"></canvas>
+    </div>
+    <div class="draw-tools">
+        <div class="color-btn active" style="background:#000" onclick="setColor('#000',this)"></div>
+        <div class="color-btn" style="background:#E63946" onclick="setColor('#E63946',this)"></div>
+        <div class="color-btn" style="background:#457B9D" onclick="setColor('#457B9D',this)"></div>
+        <div class="color-btn" style="background:#F4A261" onclick="setColor('#F4A261',this)"></div>
+        <div class="color-btn" style="background:#2A9D8F" onclick="setColor('#2A9D8F',this)"></div>
+        <button class="btn btn-small btn-arial" onclick="clearCanvas()">🗑 Очистить</button>
+    </div>
+    <button class="btn btn-primary btn-arial" id="submit-btn" onclick="submitDrawing()">✅ Готово</button>
+</div>
+<div class="screen" id="screen-waiting">
+    <h1>⏳</h1>
+    <h2>Ожидание...</h2>
+    <p style="font-family:var(--marker);">Другие игроки рисуют</p>
+    <div class="progress-doodle"><div class="progress-fill" id="waiting-progress" style="width:33%;"></div></div>
+    <p style="font-family:var(--marker);font-size:14px;" id="waiting-text">Готово: 1/3</p>
+</div>
+<div class="screen" id="screen-vote">
+    <h1>🗳</h1>
+    <h2>Чей рисунок смешнее?</h2>
+    <div class="vote-grid" id="vote-grid"></div>
+    <button class="btn btn-primary btn-arial" id="vote-btn" onclick="submitVote()">✅ Голосовать</button>
+</div>
+<div class="screen" id="screen-results">
+    <h1>🏆</h1>
+    <h2>Результаты!</h2>
+    <p style="font-family:var(--marker);">🥇 <b id="winner-name">...</b></p>
+    <div id="winner-drawing" style="text-align:center;margin-top:10px;"></div>
+    <button class="btn btn-primary btn-arial" id="btn-finish" onclick="finishGame()">▶ Следующий раунд</button>
+    <button class="btn btn-secondary btn-arial" onclick="goToLobby()">← Назад в лобби</button>
 </div>
 </div>
-<div class="photo-modal" id="draw-photo-modal"><img class="photo-modal-image" id="draw-photo-modal-img" src="" alt="Рисунок"><div class="photo-modal-buttons"><div class="photo-modal-btn back" onclick="closeDrawPhoto()">↩ НАЗАД</div><div class="photo-modal-btn" onclick="confirmDrawVote()">✅ ВЫБРАТЬ</div></div></div>
-<script>
-var p=new URLSearchParams(window.location.search);
-var SRV=p.get('server_url')||'https://regroup-lucid-bronco.ngrok-free.dev';
-var SID=p.get('session_id')||'test-session';
-var myId=p.get('user_id')||'unknown';
-var myName=p.get('username')||'Игрок';
-var H={'Content-Type':'application/json','ngrok-skip-browser-warning':'true'};
+</div>
+<div class="photo-modal" id="draw-photo-modal">
+    <img class="photo-modal-image" id="draw-photo-modal-img" src="" alt="Рисунок">
+    <div class="photo-modal-buttons">
+        <div class="photo-modal-btn back" onclick="closeDrawPhoto()">↩ НАЗАД</div>
+        <div class="photo-modal-btn" onclick="confirmDrawVote()">✅ ВЫБРАТЬ</div>
+    </div>
+</div>
 
-var drawColor='#000000',isDrawing=false,canvas,ctx,drawings={},players={},selectedVote=null,previewDrawPlayer=null,drawTask='Дорисуй корону',pressTimer,roundVoted=false;
-var avatarImageData=null;
-async function loadTask(){
-    try{
-        var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});
-        var state=await r.json();
-        players=state.players||{};
-        drawTask=state.draw_task||'Дорисуй корону';
-    }catch(e){
-        drawTask='Дорисуй корону';
+<script>
+var p = new URLSearchParams(window.location.search);
+var SRV = p.get('server_url') || 'https://regroup-lucid-bronco.ngrok-free.dev';
+var SID = p.get('session_id') || 'test-session';
+var myId = p.get('user_id') || 'unknown';
+var myName = p.get('username') || 'Игрок';
+var H = {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true'};
+
+var drawColor = '#000000';
+var isDrawing = false;
+var canvas, ctx;
+var drawings = {};
+var players = {};
+var selectedVote = null;
+var drawTask = '';
+var roundFinished = false;
+var waitingInterval = null;
+var avatarImageData = null;
+
+async function loadTask() {
+    try {
+        var r = await fetch(SRV + '/api/state?session_id=' + SID, {
+            headers: {'ngrok-skip-browser-warning': 'true'}
+        });
+        var state = await r.json();
+        players = state.players || {};
+        drawTask = state.draw_task || 'Дорисуй корону';
+    } catch(e) {
+        drawTask = 'Дорисуй корону';
     }
-    document.getElementById('draw-task-text').textContent='Задание: «'+drawTask+'»';
+    document.getElementById('draw-task-text').textContent = '📝 Задание: «' + drawTask + '»';
 }
-function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
-function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
-function goToLobby(){window.parent.postMessage({type:'go-lobby'},'*');}
-function initCanvas(){canvas=document.getElementById('draw-canvas');ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);var otherPlayers=[];for(var uid in players){if(uid!==myId&&players[uid].avatar){otherPlayers.push({uid:uid,avatar:players[uid].avatar,name:players[uid].username});}}if(otherPlayers.length>0){var rp=otherPlayers[Math.floor(Math.random()*otherPlayers.length)];var img=new Image();img.crossOrigin='anonymous';img.onload=function(){avatarImageData=img;drawAvatarOnCanvas();};img.onerror=function(){drawSilhouette();};img.src=rp.avatar;}else{drawSilhouette();}ctx.strokeStyle=drawColor;ctx.lineWidth=5;ctx.lineCap='round';ctx.lineJoin='round';canvas.addEventListener('mousedown',function(e){isDrawing=true;var p=getPos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});canvas.addEventListener('mousemove',function(e){if(!isDrawing)return;var p=getPos(e);ctx.lineTo(p.x,p.y);ctx.stroke();});canvas.addEventListener('mouseup',function(){isDrawing=false;});canvas.addEventListener('touchstart',function(e){e.preventDefault();isDrawing=true;var p=getPos(e.touches[0]);ctx.beginPath();ctx.moveTo(p.x,p.y);pressTimer=setTimeout(function(){openDrawFullscreen();},500);});canvas.addEventListener('touchmove',function(e){clearTimeout(pressTimer);e.preventDefault();if(!isDrawing)return;var p=getPos(e.touches[0]);ctx.lineTo(p.x,p.y);ctx.stroke();});canvas.addEventListener('touchend',function(){clearTimeout(pressTimer);isDrawing=false;});}
-function drawAvatarOnCanvas(){if(!avatarImageData)return;var size=280,x=(canvas.width-size)/2,y=(canvas.height-size)/2;ctx.save();ctx.beginPath();ctx.arc(canvas.width/2,canvas.height/2,size/2,0,Math.PI*2);ctx.closePath();ctx.clip();ctx.drawImage(avatarImageData,x,y,size,size);ctx.restore();ctx.beginPath();ctx.arc(canvas.width/2,canvas.height/2,size/2,0,Math.PI*2);ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.stroke();}
-function drawSilhouette(){ctx.fillStyle='#ddd';ctx.beginPath();ctx.arc(160,120,60,0,Math.PI*2);ctx.fill();ctx.fillStyle='#bbb';ctx.fillRect(100,180,120,140);}
-function getPos(e){var r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*(canvas.width/r.width),y:(e.clientY-r.top)*(canvas.height/r.height)};}
-function setColor(c,b){drawColor=c;document.querySelectorAll('.color-btn').forEach(function(b){b.classList.remove('active');});b.classList.add('active');if(ctx)ctx.strokeStyle=c;}
-function clearCanvas(){if(ctx){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);if(avatarImageData)drawAvatarOnCanvas();}}
-function openDrawFullscreen(){document.getElementById('draw-photo-modal-img').src=canvas.toDataURL();document.getElementById('draw-photo-modal').classList.add('active');}
-function closeDrawPhoto(){document.getElementById('draw-photo-modal').classList.remove('active');previewDrawPlayer=null;}
-function confirmDrawVote(){if(previewDrawPlayer){document.querySelectorAll('#vote-grid .vote-card').forEach(function(c){c.classList.remove('selected');if(c.dataset.player===previewDrawPlayer)c.classList.add('selected');});selectedVote=previewDrawPlayer;showToast('Выбран '+drawings[previewDrawPlayer]?.username||previewDrawPlayer);}closeDrawPhoto();}
-async function submitDrawing(){showToast('✅ Отправлено!');var img=canvas.toDataURL();await fetch(SRV+'/api/submit-drawing',{method:'POST',headers:H,body:JSON.stringify({session_id:SID,user_id:myId,image:img})});showScreen('waiting');checkAnswers();}
-async function checkAnswers(){var iv=setInterval(async function(){var res=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});var state=await res.json();drawings=state.drawings||{};players=state.players||{};var up=Object.keys(drawings).length,total=state.players_count||3;document.getElementById('waiting-progress').style.width=Math.round(up/total*100)+'%';document.getElementById('waiting-text').textContent='Готово: '+up+'/'+total;if(state.phase==='voting'||up>=total){clearInterval(iv);renderVoteGrid();showScreen('vote');}},2000);}
-function function renderVoteGrid(){
-    var g=document.getElementById('vote-grid');
-    g.innerHTML='';
-    var keys=Object.keys(drawings);
-    for(var i=0;i<keys.length;i++){
-        var uid=keys[i],p=drawings[uid],name=p.username||uid;
-        var imgHtml=p.image?'<img src="'+p.image+'" class="vote-img" onclick="openDrawVotePreview(\''+uid+'\')">':'<div class="vote-img" style="background:#ddd;display:flex;align-items:center;justify-content:center;font-size:60px;">🎨</div>';
-        g.innerHTML+='<div class="vote-card" data-player="'+uid+'">'+imgHtml+'<p style="font-family:var(--marker);font-size:14px;">'+name+'</p></div>';
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(function(s) {
+        s.classList.remove('active');
+    });
+    var t = document.getElementById('screen-' + id);
+    if (t) {
+        t.classList.add('active', 'bounce-in');
+        setTimeout(function() { t.classList.remove('bounce-in'); }, 500);
     }
 }
-function openDrawVotePreview(uid){previewDrawPlayer=uid;var p=drawings[uid];var img=document.getElementById('draw-photo-modal-img');img.src=p&&p.image?p.image:'';document.getElementById('draw-photo-modal').classList.add('active');}
-async function submitVote(){if(!selectedVote){showToast('⚠ Выбери!');return;}var res=await fetch(SRV+'/api/vote',{method:'POST',headers:H,body:JSON.stringify({session_id:SID,user_id:myId,voted_for:selectedVote,game:'draw'})});var data=await res.json();if(data.status==='error'){showToast('⚠ '+data.message);return;}if(data.all_voted){showResults(data.winner_name);}else{showToast('✅ Выбор сделан! Ожидаем других...');var ci=setInterval(async function(){var sr=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});var s=await sr.json();if(s.all_voted||s.phase==='results'){clearInterval(ci);showResults(s.winner_name);}},1500);}}
-function showResults(winnerName){document.getElementById('winner-name').textContent=winnerName||'Неизвестный игрок';var wp=drawings[winnerName]||Object.values(drawings).find(function(p){return p.username===winnerName;});if(wp&&wp.image){document.getElementById('winner-drawing').innerHTML='<img src="'+wp.image+'" style="max-width:100%;border-radius:15px;border:var(--border);">';}showScreen('results');}
-function finishGame(){if(roundVoted)return;roundVoted=true;document.getElementById('btn-finish').disabled=true;document.getElementById('btn-finish').textContent='⏳ Ожидание...';var scores={};if(drawings[selectedVote])scores[drawings[selectedVote].username||selectedVote]=5;window.parent.postMessage({type:'game-complete',scores:scores},'*');}
-window.addEventListener('DOMContentLoaded',async function(){await loadTask();initCanvas();});
+
+function showToast(m) {
+    var t = document.getElementById('toast');
+    t.textContent = m;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+
+function goToLobby() {
+    if (waitingInterval) clearInterval(waitingInterval);
+    window.parent.postMessage({type: 'go-lobby'}, '*');
+}
+
+function initCanvas() {
+    canvas = document.getElementById('draw-canvas');
+    ctx = canvas.getContext('2d');
+    
+    // Белый фон
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Загружаем аватар случайного другого игрока
+    var otherPlayers = [];
+    for (var uid in players) {
+        if (uid !== myId && players[uid].avatar) {
+            otherPlayers.push({uid: uid, avatar: players[uid].avatar, name: players[uid].username});
+        }
+    }
+    
+    if (otherPlayers.length > 0) {
+        var rp = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
+        var img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = function() {
+            avatarImageData = img;
+            drawAvatarOnCanvas();
+        };
+        img.onerror = function() {
+            drawSilhouette();
+        };
+        img.src = rp.avatar;
+    } else {
+        drawSilhouette();
+    }
+    
+    ctx.strokeStyle = drawColor;
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Mouse events
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    
+    // Touch events
+    canvas.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        var touch = e.touches[0];
+        var pos = getPos(touch);
+        startDraw(pos);
+    });
+    canvas.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+        var touch = e.touches[0];
+        var pos = getPos(touch);
+        draw(pos);
+    });
+    canvas.addEventListener('touchend', stopDraw);
+}
+
+function drawAvatarOnCanvas() {
+    if (!avatarImageData) return;
+    var size = 280;
+    var x = (canvas.width - size) / 2;
+    var y = (canvas.height - size) / 2;
+    
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, size / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(avatarImageData, x, y, size, size);
+    ctx.restore();
+    
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, size / 2, 0, Math.PI * 2);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+}
+
+function drawSilhouette() {
+    ctx.fillStyle = '#ddd';
+    ctx.beginPath();
+    ctx.arc(160, 120, 60, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#bbb';
+    ctx.fillRect(100, 180, 120, 140);
+}
+
+function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = canvas.width / rect.width;
+    var scaleY = canvas.height / rect.height;
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
+}
+
+function startDraw(pos) {
+    isDrawing = true;
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+}
+
+function draw(pos) {
+    if (!isDrawing) return;
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+}
+
+function stopDraw() {
+    isDrawing = false;
+}
+
+function setColor(c, btn) {
+    drawColor = c;
+    document.querySelectorAll('.color-btn').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    btn.classList.add('active');
+    if (ctx) ctx.strokeStyle = c;
+}
+
+function clearCanvas() {
+    if (ctx) {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (avatarImageData) {
+            drawAvatarOnCanvas();
+        } else {
+            drawSilhouette();
+        }
+    }
+}
+
+async function submitDrawing() {
+    var submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Отправка...';
+    
+    var imgData = canvas.toDataURL();
+    
+    try {
+        var res = await fetch(SRV + '/api/submit-drawing', {
+            method: 'POST',
+            headers: H,
+            body: JSON.stringify({
+                session_id: SID,
+                user_id: myId,
+                image: imgData
+            })
+        });
+        var data = await res.json();
+        
+        if (data.status === 'ok') {
+            showToast('✅ Рисунок отправлен!');
+            showScreen('waiting');
+            startWaitingForDrawings();
+        } else {
+            showToast('❌ Ошибка отправки');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✅ Готово';
+        }
+    } catch(e) {
+        console.error('Submit error:', e);
+        showToast('❌ Ошибка соединения');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✅ Готово';
+    }
+}
+
+function startWaitingForDrawings() {
+    if (waitingInterval) clearInterval(waitingInterval);
+    
+    waitingInterval = setInterval(async function() {
+        try {
+            var res = await fetch(SRV + '/api/state?session_id=' + SID, {
+                headers: {'ngrok-skip-browser-warning': 'true'}
+            });
+            var state = await res.json();
+            
+            drawings = state.drawings || {};
+            var submittedCount = Object.keys(drawings).length;
+            var total = state.players_count || 3;
+            var percent = Math.round(submittedCount / total * 100);
+            
+            document.getElementById('waiting-progress').style.width = percent + '%';
+            document.getElementById('waiting-text').textContent = 'Готово: ' + submittedCount + '/' + total;
+            
+            if (state.phase === 'voting' || submittedCount >= total) {
+                clearInterval(waitingInterval);
+                renderVoteGrid();
+                showScreen('vote');
+            }
+        } catch(e) { console.error('Waiting poll error:', e); }
+    }, 1500);
+}
+
+function renderVoteGrid() {
+    var grid = document.getElementById('vote-grid');
+    grid.innerHTML = '';
+    
+    var keys = Object.keys(drawings);
+    if (keys.length === 0) {
+        grid.innerHTML = '<p style="font-family:var(--marker);text-align:center;">Нет рисунков для голосования</p>';
+        return;
+    }
+    
+    for (var i = 0; i < keys.length; i++) {
+        var uid = keys[i];
+        var p = drawings[uid];
+        var name = p.username || uid;
+        var isSelf = (uid === myId);
+        
+        var card = document.createElement('div');
+        card.className = 'vote-card';
+        card.setAttribute('data-player', uid);
+        card.style.cursor = isSelf ? 'not-allowed' : 'pointer';
+        card.style.opacity = isSelf ? '0.6' : '1';
+        
+        var imgHtml = p.image ? 
+            '<img src="' + p.image + '" class="vote-img" onclick="event.stopPropagation();openDrawPreview(\'' + uid + '\')">' : 
+            '<div class="vote-img" style="background:#ddd;display:flex;align-items:center;justify-content:center;font-size:60px;">🎨</div>';
+        
+        card.innerHTML = imgHtml + '<p style="font-family:var(--marker);font-size:14px;margin-top:8px;">' + escapeHtml(name) + '</p>';
+        
+        if (!isSelf) {
+            card.onclick = (function(id) { 
+                return function() { selectVote(id); };
+            })(uid);
+        }
+        
+        grid.appendChild(card);
+    }
+}
+
+function selectVote(uid) {
+    document.querySelectorAll('#vote-grid .vote-card').forEach(function(card) {
+        card.classList.remove('selected');
+    });
+    
+    var cards = document.querySelectorAll('#vote-grid .vote-card');
+    for (var i = 0; i < cards.length; i++) {
+        if (cards[i].getAttribute('data-player') === uid) {
+            cards[i].classList.add('selected');
+            break;
+        }
+    }
+    
+    selectedVote = uid;
+    showToast('✅ Выбран рисунок ' + (drawings[uid]?.username || uid));
+}
+
+function openDrawPreview(uid) {
+    var p = drawings[uid];
+    if (p && p.image) {
+        document.getElementById('draw-photo-modal-img').src = p.image;
+        document.getElementById('draw-photo-modal').classList.add('active');
+        previewUid = uid;
+    }
+}
+
+var previewUid = null;
+
+function closeDrawPhoto() {
+    document.getElementById('draw-photo-modal').classList.remove('active');
+    previewUid = null;
+}
+
+function confirmDrawVote() {
+    if (previewUid) {
+        selectVote(previewUid);
+        previewUid = null;
+    }
+    closeDrawPhoto();
+}
+
+async function submitVote() {
+    if (!selectedVote) {
+        showToast('⚠ Выбери самый смешной рисунок!');
+        return;
+    }
+    
+    var voteBtn = document.getElementById('vote-btn');
+    voteBtn.disabled = true;
+    voteBtn.textContent = '⏳ Отправка...';
+    
+    try {
+        var res = await fetch(SRV + '/api/vote', {
+            method: 'POST',
+            headers: H,
+            body: JSON.stringify({
+                session_id: SID,
+                user_id: myId,
+                voted_for: selectedVote,
+                game: 'draw'
+            })
+        });
+        var data = await res.json();
+        
+        if (data.status === 'error') {
+            showToast('⚠ ' + (data.message || 'Ошибка'));
+            voteBtn.disabled = false;
+            voteBtn.textContent = '✅ Голосовать';
+            return;
+        }
+        
+        showToast('✅ Голос учтён!');
+        
+        if (data.all_voted || data.phase === 'results') {
+            await waitForWinner();
+        } else {
+            voteBtn.textContent = '⏳ Ожидание...';
+            await waitForWinner();
+        }
+    } catch(e) {
+        console.error('Vote error:', e);
+        showToast('❌ Ошибка');
+        voteBtn.disabled = false;
+        voteBtn.textContent = '✅ Голосовать';
+    }
+}
+
+async function waitForWinner() {
+    var interval = setInterval(async function() {
+        try {
+            var res = await fetch(SRV + '/api/state?session_id=' + SID, {
+                headers: {'ngrok-skip-browser-warning': 'true'}
+            });
+            var state = await res.json();
+            
+            if (state.phase === 'results' && state.winner_name) {
+                clearInterval(interval);
+                showResults(state.winner_name);
+            }
+        } catch(e) { console.error('Results poll error:', e); }
+    }, 1500);
+}
+
+function showResults(winnerName) {
+    var displayName = winnerName || 'Неизвестный игрок';
+    document.getElementById('winner-name').textContent = displayName;
+    
+    // Находим рисунок победителя
+    var winnerDrawing = null;
+    for (var uid in drawings) {
+        if (drawings[uid].username === winnerName) {
+            winnerDrawing = drawings[uid].image;
+            break;
+        }
+    }
+    
+    if (winnerDrawing) {
+        document.getElementById('winner-drawing').innerHTML = '<img src="' + winnerDrawing + '" style="max-width:100%;border-radius:15px;border:var(--border);">';
+    } else {
+        document.getElementById('winner-drawing').innerHTML = '<div style="text-align:center;">🎨</div>';
+    }
+    
+    showScreen('results');
+}
+
+function finishGame() {
+    if (roundFinished) return;
+    roundFinished = true;
+    
+    var finishBtn = document.getElementById('btn-finish');
+    if (finishBtn) {
+        finishBtn.disabled = true;
+        finishBtn.textContent = '⏳ Ожидание...';
+    }
+    
+    var winnerName = document.getElementById('winner-name').textContent;
+    var scores = {};
+    if (winnerName && winnerName !== 'Неизвестный игрок') {
+        scores[winnerName] = 5;
+    }
+    
+    window.parent.postMessage({type: 'game-complete', scores: scores}, '*');
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+window.addEventListener('DOMContentLoaded', async function() {
+    await loadTask();
+    initCanvas();
+});
 </script>
 </body>
 </html>
