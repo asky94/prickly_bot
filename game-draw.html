@@ -26,7 +26,17 @@ var H={'Content-Type':'application/json','ngrok-skip-browser-warning':'true'};
 
 var drawColor='#000000',isDrawing=false,canvas,ctx,drawings={},players={},selectedVote=null,previewDrawPlayer=null,drawTask='Дорисуй корону',pressTimer,roundVoted=false;
 var avatarImageData=null;
-async function loadTask(){try{var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});var state=await r.json();players=state.players||{};drawTask=state.draw_task||'Дорисуй корону';}catch(e){drawTask='Дорисуй корону';}document.getElementById('draw-task-text').textContent='Задание: «'+drawTask+'»';}
+async function loadTask(){
+    try{
+        var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});
+        var state=await r.json();
+        players=state.players||{};
+        drawTask=state.draw_task||'Дорисуй корону';
+    }catch(e){
+        drawTask='Дорисуй корону';
+    }
+    document.getElementById('draw-task-text').textContent='Задание: «'+drawTask+'»';
+}
 function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 function goToLobby(){window.parent.postMessage({type:'go-lobby'},'*');}
