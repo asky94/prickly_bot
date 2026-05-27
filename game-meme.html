@@ -25,7 +25,20 @@ var H={'Content-Type':'application/json','ngrok-skip-browser-warning':'true'};
 
 var memeTexts={},players={},memeImage='',selectedVote=null,roundVoted=false;
 var FALLBACK_MEMES=['https://i.imgflip.com/1bij.jpg','https://i.imgflip.com/30b1gx.jpg','https://i.imgflip.com/1g8my4.jpg'];
-async function loadGame(){try{var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});var s=await r.json();memeImage=s.meme_image||'';var memeImg=document.getElementById('meme-img');if(memeImage){var ti=new Image();ti.onload=function(){memeImg.innerHTML='<img src="'+memeImage+'" style="width:100%;height:100%;object-fit:cover;">';};ti.onerror=function(){var fb=FALLBACK_MEMES[Math.floor(Math.random()*FALLBACK_MEMES.length)];memeImg.innerHTML='<img src="'+fb+'" style="width:100%;height:100%;object-fit:cover;">';memeImage=fb;};ti.src=memeImage;}else{var fb=FALLBACK_MEMES[Math.floor(Math.random()*FALLBACK_MEMES.length)];memeImg.innerHTML='<img src="'+fb+'" style="width:100%;height:100%;object-fit:cover;">';memeImage=fb;}}catch(e){var fb=FALLBACK_MEMES[Math.floor(Math.random()*FALLBACK_MEMES.length)];document.getElementById('meme-img').innerHTML='<img src="'+fb+'" style="width:100%;height:100%;object-fit:cover;">';memeImage=fb;}}
+async function loadGame(){
+    try{
+        var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});
+        var s=await r.json();
+        memeImage=s.meme_image||'';
+        var memeImg=document.getElementById('meme-img');
+        if(memeImage){
+            memeImg.innerHTML='<img src="'+memeImage+'" style="width:100%;height:100%;object-fit:cover;">';
+        }
+    }catch(e){
+        document.getElementById('meme-img').innerHTML='🖼';
+    }
+}
+
 function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 function goToLobby(){window.parent.postMessage({type:'go-lobby'},'*');}
