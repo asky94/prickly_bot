@@ -118,7 +118,8 @@ function loadGame(game){
     stopPolling();
     document.getElementById('round-badge').textContent='Раунд '+currentRound+'/'+TOTAL_ROUNDS;
     document.getElementById('game-container').classList.add('active');
-    document.getElementById('game-frame').src=game.file;
+    var params = '?server_url=' + encodeURIComponent(SRV) + '&session_id=' + encodeURIComponent(SID) + '&user_id=' + encodeURIComponent(myUserId) + '&username=' + encodeURIComponent(myUsername);
+    document.getElementById('game-frame').src = game.file + params;
 }
 
 window.addEventListener('message',function(e){
