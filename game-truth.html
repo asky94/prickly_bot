@@ -27,7 +27,31 @@ var myName=p.get('username')||'Игрок';
 var H={'Content-Type':'application/json','ngrok-skip-browser-warning':'true'};
 
 var allPlayers=[],players={},truthQuestion='',myVote=null,victimId=null,penaltyPhoto=null,roundVoted=false;
-async function loadGame(){try{var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});var state=await r.json();players=state.players||{};allPlayers=[];for(var uid in players){allPlayers.push({id:uid,name:players[uid].username||uid,avatar:players[uid].avatar});}truthQuestion=state.who_quote||'Кто из вас?';}catch(e){allPlayers=[{id:'p1',name:'Саша'},{id:'p2',name:'Маша'},{id:'p3',name:'Дима'}];}document.getElementById('truth-question').textContent=truthQuestion;renderCards();}
+async function loadGame(){
+    try{
+        var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});
+        var state=await r.json();
+        players=state.players||{};
+        allPlayers=[];
+        for(var uid in players){
+            allPlayers.push({id:uid,name:players[uid].username||uid,avatar:players[uid].avatar});
+        }
+    }catch(e){
+        allPlayers=[{id:'p1',name:'Саша'},{id:'p2',name:'Маша'},{id:'p3',name:'Дима'}];
+    }
+    
+    // Загружаем вопрос из /api/task
+    try{
+        var tr=await fetch(SRV+'/api/task?session_id='+SID+'&game_type=truth&user_id='+myId,{headers:{'ngrok-skip-browser-warning':'true'}});
+        var td=await tr.json();
+        truthQuestion=td.task||'Кто из вас?';
+    }catch(e){
+        truthQuestion='Кто из вас?';
+    }
+    
+    document.getElementById('truth-question').textContent=truthQuestion;
+    renderCards();
+}
 function renderCards(){var g=document.getElementById('truth-grid');g.innerHTML='';for(var i=0;i<allPlayers.length;i++){var p=allPlayers[i];var avatarHtml=p.avatar?'<img src="'+p.avatar+'" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid var(--ink);margin-bottom:5px;">':'<div style="width:50px;height:50px;border-radius:50%;background:#457B9D;display:flex;align-items:center;justify-content:center;font-size:24px;color:white;font-family:var(--marker);margin-bottom:5px;">'+(p.name||'?').substr(0,2).toUpperCase()+'</div>';g.innerHTML+='<div class="vote-card" data-player="'+p.id+'" onclick="selectVote(\''+p.id+'\')">'+avatarHtml+'<p style="font-family:var(--marker);">'+p.name+'</p></div>';}}
 function selectVote(id){document.querySelectorAll('#truth-grid .vote-card').forEach(function(c){c.classList.remove('selected');});var cards=document.querySelectorAll('#truth-grid .vote-card');for(var i=0;i<cards.length;i++){if(cards[i].dataset.player===id)cards[i].classList.add('selected');}myVote=id;}
 function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
