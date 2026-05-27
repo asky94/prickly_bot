@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Правда или действие</title><link rel="stylesheet" href="shared.css">
+    <style>body{background:transparent;padding:0}.phone-frame{box-shadow:none;border:none;border-radius:0;min-height:auto;max-width:100%}.header{display:none}.content{padding:20px 15px;gap:12px}.penalty-photo-preview{width:200px;height:200px;border-radius:20px;object-fit:cover;border:var(--border);box-shadow:var(--shadow);margin:10px auto}.penalty-task-text{font-family:Arial,sans-serif;font-weight:900;font-size:16px;margin:10px 0;color:var(--ink)}</style>
+</head>
+<body>
+<div class="phone-frame">
+<div class="toast" id="toast"></div>
+<div class="content">
+<div class="screen active" id="screen-truth-vote"><h1>🎯</h1><h2>Правда или действие!</h2><p style="font-family:Arial,sans-serif;font-weight:900;" id="truth-question">Загрузка...</p><div class="vote-grid" id="truth-grid"></div><button class="btn btn-primary btn-arial" onclick="submitTruthVote()">🎯 Голосовать</button></div>
+<div class="screen" id="screen-waiting"><h1>⏳</h1><h2>Ожидание...</h2><p style="font-family:var(--marker);">Другие игроки голосуют</p><div class="progress-doodle"><div class="progress-fill" id="waiting-progress" style="width:33%;"></div></div><p style="font-family:var(--marker);font-size:14px;" id="waiting-text">Готово: 1/3</p></div>
+<div class="screen" id="screen-truth-action"><h1>😱</h1><h2>Это правда?</h2><p style="font-family:var(--marker);">Большинство считает, что это ты!</p><button class="btn btn-primary btn-arial" onclick="truthAnswer(true)">✅ Признаюсь (+3)</button><button class="btn btn-secondary btn-arial" onclick="truthAnswer(false)">❌ Отказываюсь</button></div>
+<div class="screen" id="screen-waiting-victim"><h1>⏳</h1><h2>Ожидание...</h2><p style="font-family:var(--marker);" id="victim-name-text">Ждём ответа...</p></div>
+<div class="screen" id="screen-truth-penalty"><h1>📸</h1><h2>Штраф!</h2><p style="font-family:Arial,sans-serif;font-weight:900;" id="penalty-text">Сфоткай нос!</p><div class="photo-upload-area" onclick="document.getElementById('penalty-camera').click()">📷 Сделать фото</div><input type="file" id="penalty-camera" accept="image/*" capture="environment" onchange="handlePenalty(event)" style="display:none;"><img class="penalty-photo-preview" id="penalty-preview" style="display:none;"><p id="penalty-status" style="font-family:var(--marker);color:var(--green);"></p><button class="btn btn-primary btn-arial" id="btn-penalty-done" onclick="submitPenalty()" style="display:none;">✅ Отправить</button></div>
+<div class="screen" id="screen-penalty-vote"><h1>🗳</h1><h2>Принять штраф?</h2><img class="penalty-photo-preview" id="penalty-vote-photo" src="" alt="Штраф"><p class="penalty-task-text" id="penalty-task-display"></p><p style="font-family:var(--marker);" id="penalty-vote-name"></p><button class="btn btn-primary btn-arial" onclick="votePenalty(true)">✅ Принять</button><button class="btn btn-secondary btn-arial" onclick="votePenalty(false)">❌ Отклонить</button></div>
+<div class="screen" id="screen-results"><h1>🏆</h1><h2>Результат!</h2><p id="result-text" style="font-family:var(--marker);"></p><button class="btn btn-primary btn-arial" id="btn-finish" onclick="finishGame()">▶ Следующий раунд</button><button class="btn btn-secondary btn-arial" onclick="goToLobby()">← Назад в лобби</button></div>
+</div>
+</div>
+<script>
+var S=sessionStorage,SRV=S.getItem('server_url')||'https://regroup-lucid-bronco.ngrok-free.dev',SID=S.getItem('session_id')||'test-session',myId=S.getItem('user_id')||'unknown',myName=S.getItem('username')||'Игрок';
+var allPlayers=[],players={},truthQuestion='',myVote=null,victimId=null,penaltyPhoto=null,roundVoted=false;
+
+async function loadGame(){try{var r=await fetch(SRV+'/api/state?session_id='+SID);var state=await r.json();players=state.players||{};allPlayers=[];for(var uid in players){allPlayers.push({id:uid,name:players[uid].username||uid,avatar:players[uid].avatar});}try{var tr=await fetch(SRV+'/api/task?session_id='+SID+'&game_type=truth&user_id='+myId);var td=await tr.json();truthQuestion=td.task||'Кто из вас?';}catch(e){truthQuestion='Кто из вас?';}}catch(e){allPlayers=[{id:'p1',name:'Саша'},{id:'p2',name:'Маша'},{id:'p3',name:'Дима'}];}document.getElementById('truth-question').textContent=truthQuestion;renderCards();}
+
+function renderCards(){var g=document.getElementById('truth-grid');g.innerHTML='';for(var i=0;i<allPlayers.length;i++){var p=allPlayers[i];var avatarHtml=p.avatar?'<img src="'+p.avatar+'" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid var(--ink);margin-bottom:5px;">':'<div style="width:50px;height:50px;border-radius:50%;background:#457B9D;display:flex;align-items:center;justify-content:center;font-size:24px;color:white;font-family:var(--marker);margin-bottom:5px;">'+(p.name||'?').substr(0,2).toUpperCase()+'</div>';g.innerHTML+='<div class="vote-card" data-player="'+p.id+'" onclick="selectVote(\''+p.id+'\')">'+avatarHtml+'<p style="font-family:var(--marker);">'+p.name+'</p></div>';}}
+
+function selectVote(id){document.querySelectorAll('#truth-grid .vote-card').forEach(function(c){c.classList.remove('selected');});var cards=document.querySelectorAll('#truth-grid .vote-card');for(var i=0;i<cards.length;i++){if(cards[i].dataset.player===id)cards[i].classList.add('selected');}myVote=id;}
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+function goToLobby(){window.parent.postMessage({type:'go-lobby'},'*');}
+
+async function submitTruthVote(){if(!myVote){showToast('⚠ Выбери!');return;}
+    var res=await fetch(SRV+'/api/vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID,user_id:myId,voted_for:myVote,game:'truth_victim'})});
+    var data=await res.json();
+    if(data.phase === 'waiting_victim'){
+        var victimName = data.victim_name || 'Игрок';
+        if(myName === victimName || myId === data.victim){
+            showScreen('truth-action');
+        } else {
+            document.getElementById('victim-name-text').textContent = victimName + ' решает...';
+            showScreen('waiting-victim');
+            waitForVictimDecision();
+        }
+    } else {
+        showScreen('waiting');
+        waitForVictim();
+    }
+}
+
+async function waitForVictim(){
+    var iv=setInterval(async function(){
+        var res=await fetch(SRV+'/api/state?session_id='+SID);var state=await res.json();
+        var up=Object.keys(state.truth_votes||{}).length,total=state.players_count||3;
+        document.getElementById('waiting-progress').style.width=Math.round(up/total*100)+'%';
+        document.getElementById('waiting-text').textContent='Готово: '+up+'/'+total;
+        if(state.phase === 'waiting_victim'){
+            clearInterval(iv);
+            var victimName = state.victim_name || 'Игрок';
+            if(myName === victimName || myId === state.victim){
+                showScreen('truth-action');
+            } else {
+                document.getElementById('victim-name-text').textContent = victimName + ' решает...';
+                showScreen('waiting-victim');
+                waitForVictimDecision();
+            }
+        }
+    },1000);
+}
+
+async function waitForVictimDecision(){
+    var iv=setInterval(async function(){
+        var res=await fetch(SRV+'/api/state?session_id='+SID);var state=await res.json();
+        if(state.phase === 'penalty_voting'){
+            clearInterval(iv);
+            document.getElementById('penalty-vote-photo').src=state.penalty_photo||'';
+            document.getElementById('penalty-task-display').textContent='Задание: '+(state.penalty_task_text||'Штрафное задание');
+            document.getElementById('penalty-vote-name').textContent=(state.victim_name||'Игрок')+' выполнил(а) штраф. Принимаем?';
+            showScreen('penalty-vote');
+        } else if(state.phase === 'results'){
+            clearInterval(iv);
+            showResults(state);
+        }
+    },1000);
+}
+
+async function truthAnswer(isTrue){
+    var res=await fetch(SRV+'/api/truth-answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID,user_id:myId,answer:isTrue})});
+    var data=await res.json();
+    if(data.phase==='results'){
+        document.getElementById('result-text').textContent='✅ Признался! +3 очка';
+        showScreen('results');
+    }else if(data.phase==='penalty'){
+        showScreen('truth-penalty');
+    }
+}
+
+function handlePenalty(event){var f=event.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){penaltyPhoto=e.target.result;document.getElementById('penalty-preview').src=penaltyPhoto;document.getElementById('penalty-preview').style.display='block';document.getElementById('penalty-status').textContent='✅ Загружено!';document.getElementById('btn-penalty-done').style.display='inline-block';};r.readAsDataURL(f);}
+async function submitPenalty(){
+    var res=await fetch(SRV+'/api/submit-penalty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID,user_id:myId,image:penaltyPhoto})});
+    var data=await res.json();
+    if(data.phase==='penalty_voting'){
+        showToast('✅ Отправлено! Ждём голосования...');
+        waitForPenaltyResult();
+    }
+}
+async function waitForPenaltyResult(){var iv=setInterval(async function(){var res=await fetch(SRV+'/api/state?session_id='+SID);var state=await res.json();if(state.phase==='results'){clearInterval(iv);showResults(state);}},1000);}
+async function votePenalty(accepted){await fetch(SRV+'/api/vote-penalty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID,user_id:myId,accepted:accepted})});showToast('✅ Голос учтён!');waitForPenaltyResult();}
+function showResults(state){var accepted=state.penalty_accepted;var victimName=state.victim_name||'Игрок';var el=document.getElementById('result-text');if(accepted===true){el.innerHTML='✅ Штраф <b>'+victimName+'</b> принят большинством!<br>+2 очка';}else if(accepted===false){el.innerHTML='❌ Штраф <b>'+victimName+'</b> отклонён!<br>0 очков';}else{el.innerHTML='Жертва ответила!';}showScreen('results');}
+function finishGame(){if(roundVoted)return;roundVoted=true;document.getElementById('btn-finish').disabled=true;document.getElementById('btn-finish').textContent='⏳ Ожидание...';var scores={};if(myId===victimId)scores[myName]=3;window.parent.postMessage({type:'game-complete',scores:scores},'*');}
+window.addEventListener('DOMContentLoaded',function(){loadGame();});
+</script>
+</body>
+</html>

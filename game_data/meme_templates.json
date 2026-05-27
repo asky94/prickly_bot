@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Кот за столом",
+    "url": "https://i.imgflip.com/1bij.jpg",
+    "text_top": true,
+    "text_bottom": true
+  },
+  {
+    "name": "Парень смотрит на девушку",
+    "url": "https://i.imgflip.com/1bij.jpg",
+    "text_top": false,
+    "text_bottom": true
+  },
+  {
+    "name": "Дрейк (две реакции)",
+    "url": "https://i.imgflip.com/1bij.jpg",
+    "text_top": false,
+    "text_bottom": false
+  },
+  {
+    "name": "Два дракона",
+    "url": "https://i.imgflip.com/1bij.jpg",
+    "text_top": true,
+    "text_bottom": true
+  },
+  {
+    "name": "Грустный Бен Аффлек",
+    "url": "https://i.imgflip.com/1bij.jpg",
+    "text_top": false,
+    "text_bottom": true
+  },
+  {
+    "name": "Человек с табличкой",
+    "url": "https://i.imgflip.com/1bij.jpg",
+    "text_top": true,
+    "text_bottom": false
+  }
+]

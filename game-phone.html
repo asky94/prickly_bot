@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Испорченный телефон</title><link rel="stylesheet" href="shared.css">
+    <style>body{background:transparent;padding:0}.phone-frame{box-shadow:none;border:none;border-radius:0;min-height:auto;max-width:100%}.header{display:none}.content{padding:20px 15px;gap:12px}#phone-canvas{width:100%;height:auto;display:block;touch-action:none}.preview-img{width:100%;max-width:280px;border-radius:15px;border:var(--border);margin-bottom:10px}.chain-item{background:white;border:var(--border);border-radius:15px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;font-family:var(--marker);box-shadow:2px 2px 0 rgba(0,0,0,0.1)}.chain-item.selected{border:4px solid var(--green)}.transition-panel{flex:1;text-align:center}.transition-panel img{width:100%;max-height:150px;object-fit:contain;border-radius:10px;border:1px solid var(--ink);cursor:pointer}.transition-arrow{font-size:24px;font-weight:bold;color:var(--prickle)}</style>
+</head>
+<body>
+<div class="phone-frame">
+<div class="toast" id="toast"></div>
+<div class="content">
+<div class="screen active" id="screen-phone-draw"><h1>📞</h1><h2>Испорченный телефон!</h2><p style="font-family:Arial,sans-serif;font-weight:900;" id="phone-prompt">Загрузка...</p><div class="draw-container"><canvas id="phone-canvas" width="320" height="320"></canvas></div><div class="draw-tools"><div class="color-btn active" style="background:#000" onclick="setColor('#000',this)"></div><div class="color-btn" style="background:#E63946" onclick="setColor('#E63946',this)"></div><div class="color-btn" style="background:#457B9D" onclick="setColor('#457B9D',this)"></div><button class="btn btn-small btn-arial" onclick="clearCanvas()">🗑 Очистить</button></div><button class="btn btn-primary btn-arial" onclick="submitDrawing()">✅ Отправить</button></div>
+<div class="screen" id="screen-waiting"><h1>⏳</h1><h2>Ожидание...</h2><p style="font-family:var(--marker);" id="waiting-text">Другие игроки выполняют ход</p></div>
+<div class="screen" id="screen-phone-text"><h1>💬</h1><h2>Опиши рисунок!</h2><img class="preview-img" id="text-drawing-preview" src="" alt="Рисунок"><input type="text" id="phone-text-input" placeholder="Что ты видишь на рисунке?" style="width:100%;padding:12px;font-family:var(--marker);font-size:16px;border-radius:10px;border:2px solid var(--ink);text-align:center;margin-bottom:10px;"><button class="btn btn-primary btn-arial" onclick="submitText()">📝 Отправить описание</button></div>
+<div class="screen" id="screen-vote"><h1>🗳</h1><h2>Самый смешной переход!</h2><p style="font-family:Arial,sans-serif;font-weight:900;">Выбери самый нелепый переход:</p><div id="phone-vote-list" style="width:100%;text-align:left;"></div><button class="btn btn-primary btn-arial" onclick="submitVote()">✅ Голосовать</button></div>
+<div class="screen" id="screen-results"><h1>🏆</h1><h2>Результаты!</h2><div id="chain" style="width:100%;text-align:left;"></div><p style="font-family:var(--marker);margin-top:10px;">🏅 Самый смешной переход: <b id="winner-text">...</b></p><button class="btn btn-primary btn-arial" id="btn-finish" onclick="finishGame()">▶ Следующий раунд</button><button class="btn btn-secondary btn-arial" onclick="goToLobby()">← Назад в лобби</button></div>
+</div>
+</div>
+<div class="photo-modal" id="phone-modal"><img class="photo-modal-image" id="phone-modal-img" src="" alt="Переход"><div class="photo-modal-buttons"><div class="photo-modal-btn back" onclick="closePhonePreview()">↩ НАЗАД</div><div class="photo-modal-btn" onclick="confirmPhoneVote()">✅ ВЫБРАТЬ</div></div></div>
+<script>
+var S=sessionStorage,SRV=S.getItem('server_url')||'https://regroup-lucid-bronco.ngrok-free.dev',SID=S.getItem('session_id')||'test-session',myId=S.getItem('user_id')||'unknown',myName=S.getItem('username')||'Игрок';
+var phoneColor='#000000',isDrawing=false,canvas,ctx,phoneWord='',selectedVote=null,roundVoted=false;
+var chainPlayers=[],chainStep=0,currentTurn=false;
+
+async function loadGame(){try{var r=await fetch(SRV+'/api/state?session_id='+SID);var s=await r.json();phoneWord=s.phone_word||'Кот-программист';var chain=s.phone_chain||{};chainPlayers=chain.players||[];chainStep=chain.step||0;updateTurn();}catch(e){phoneWord='Кот-программист';showScreen('phone-draw');document.getElementById('phone-prompt').textContent='Нарисуй: «'+phoneWord+'»';currentTurn=true;}initCanvas();}
+
+function updateTurn(){
+    if(chainStep>=chainPlayers.length){renderVoteList();showScreen('vote');return;}
+    var currentPlayer=chainPlayers[chainStep];
+    if(currentPlayer===myId){
+        if(chainStep%2===0){
+            var promptText='';
+            if(chainStep===0){promptText='Нарисуй: «'+phoneWord+'»';}
+            else{
+                fetch(SRV+'/api/state?session_id='+SID).then(function(r){return r.json();}).then(function(s){
+                    var chain=s.phone_chain||{};
+                    var prevText=chain.texts?.[chainStep-1]||'то, что описано';
+                    document.getElementById('phone-prompt').textContent='Нарисуй: «'+prevText+'»';
+                });
+                promptText='Загрузка описания...';
+            }
+            document.getElementById('phone-prompt').textContent=promptText;
+            showScreen('phone-draw');currentTurn=true;
+        }else{
+            fetch(SRV+'/api/state?session_id='+SID).then(function(r){return r.json();}).then(function(s){
+                var chain=s.phone_chain||{};
+                var prevDrawing=chain.drawings?.[chainStep-1]||'';
+                document.getElementById('text-drawing-preview').src=prevDrawing;
+                showScreen('phone-text');
+            });
+        }
+    }else{
+        var name='Игрок '+(chainStep+1);
+        fetch(SRV+'/api/state?session_id='+SID).then(function(r){return r.json();}).then(function(s){
+            var p=s.players?.[currentPlayer];
+            if(p)name=p.username||name;
+            document.getElementById('waiting-text').textContent='Ожидаем хода: '+name;
+        });
+        showScreen('waiting');
+        setTimeout(pollChain,2000);
+    }
+}
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+function goToLobby(){window.parent.postMessage({type:'go-lobby'},'*');}
+function initCanvas(){canvas=document.getElementById('phone-canvas');ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.strokeStyle=phoneColor;ctx.lineWidth=5;ctx.lineCap='round';canvas.addEventListener('mousedown',function(e){isDrawing=true;var p=getPos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});canvas.addEventListener('mousemove',function(e){if(!isDrawing)return;var p=getPos(e);ctx.lineTo(p.x,p.y);ctx.stroke();});canvas.addEventListener('mouseup',function(){isDrawing=false;});canvas.addEventListener('touchstart',function(e){e.preventDefault();isDrawing=true;var p=getPos(e.touches[0]);ctx.beginPath();ctx.moveTo(p.x,p.y);});canvas.addEventListener('touchmove',function(e){e.preventDefault();if(!isDrawing)return;var p=getPos(e.touches[0]);ctx.lineTo(p.x,p.y);ctx.stroke();});canvas.addEventListener('touchend',function(){isDrawing=false;});}
+function getPos(e){var r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*(canvas.width/r.width),y:(e.clientY-r.top)*(canvas.height/r.height)};}
+function setColor(c,b){phoneColor=c;document.querySelectorAll('.color-btn').forEach(function(b){b.classList.remove('active');});b.classList.add('active');if(ctx)ctx.strokeStyle=c;}
+function clearCanvas(){if(ctx){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);}}
+async function submitDrawing(){if(!currentTurn){showToast('⚠ Сейчас не твой ход!');return;}var img=canvas.toDataURL();await fetch(SRV+'/api/phone-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID,user_id:myId,content:img,type:'draw'})});currentTurn=false;showScreen('waiting');document.getElementById('waiting-text').textContent='Рисунок отправлен!';pollChain();}
+async function submitText(){var text=document.getElementById('phone-text-input').value.trim();if(!text){showToast('⚠ Напиши описание!');return;}await fetch(SRV+'/api/phone-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID,user_id:myId,content:text,type:'text'})});showScreen('waiting');document.getElementById('waiting-text').textContent='Описание отправлено!';pollChain();}
+function pollChain(){var iv=setInterval(async function(){var r=await fetch(SRV+'/api/state?session_id='+SID);var s=await r.json();if(s.phase==='voting'){clearInterval(iv);renderVoteList();showScreen('vote');return;}var chain=s.phone_chain||{};var step=chain.step||0;var players=chain.players||[];if(step>=players.length){clearInterval(iv);renderVoteList();showScreen('vote');return;}if(step!==chainStep){chainStep=step;clearInterval(iv);updateTurn();}},2000);}
+function renderVoteList(){
+    var list=document.getElementById('phone-vote-list');
+    list.innerHTML='';
+    fetch(SRV+'/api/state?session_id='+SID).then(function(r){return r.json();}).then(function(s){
+        var chain=s.phone_chain||{};
+        var players=chain.players||[];
+        var drawings=chain.drawings||{};
+        var texts=chain.texts||{};
+        for(var i=1;i<players.length;i++){
+            var from=s.players?.[players[i-1]]?.username||('Игрок '+(i));
+            var to=s.players?.[players[i]]?.username||('Игрок '+(i+1));
+            var leftContent='', leftIsDrawing=false;
+            if((i-1)%2===0 && drawings[i-1]){leftContent=drawings[i-1]; leftIsDrawing=true;}
+            else if((i-1)%2===1 && texts[i-1]){leftContent=texts[i-1]; leftIsDrawing=false;}
+            var rightContent='', rightIsDrawing=false;
+            if(i%2===0 && drawings[i]){rightContent=drawings[i]; rightIsDrawing=true;}
+            else if(i%2===1 && texts[i]){rightContent=texts[i]; rightIsDrawing=false;}
+            var bg=['#FFD700','#FF6B6B','#6BCB77','#4D96FF'][i%4];
+            var html='<div class="chain-item" style="cursor:pointer;border-left:5px solid '+bg+';" onclick="selectTransition('+(i-1)+',this)">';
+            html+='<div style="flex:1;display:flex;align-items:center;gap:10px;">';
+            html+='<div class="transition-panel"><p style="font-family:var(--marker);font-size:12px;">'+from+'</p>';
+            if(leftIsDrawing&&leftContent){html+='<img src="'+leftContent+'" onclick="event.stopPropagation();openImagePreview(\''+leftContent+'\')">';}
+            else if(!leftIsDrawing&&leftContent){html+='<p style="font-family:var(--marker);font-size:13px;background:#fff3cd;padding:8px;border-radius:10px;">💬 «'+leftContent+'»</p>';}
+            else{html+='<p style="font-size:12px;opacity:0.5;">—</p>';}
+            html+='</div><div class="transition-arrow">→</div><div class="transition-panel"><p style="font-family:var(--marker);font-size:12px;">'+to+'</p>';
+            if(rightIsDrawing&&rightContent){html+='<img src="'+rightContent+'" onclick="event.stopPropagation();openImagePreview(\''+rightContent+'\')">';}
+            else if(!rightIsDrawing&&rightContent){html+='<p style="font-family:var(--marker);font-size:13px;background:#fff3cd;padding:8px;border-radius:10px;">💬 «'+rightContent+'»</p>';}
+            else{html+='<p style="font-size:12px;opacity:0.5;">—</p>';}
+            html+='</div></div></div>';list.innerHTML+=html;}
+    });
+}
+function selectTransition(index,element){document.querySelectorAll('.chain-item').forEach(function(el){el.classList.remove('selected');});element.classList.add('selected');selectedVote=index;showToast('Выбран переход '+(index+1));}
+function openImagePreview(url){document.getElementById('phone-modal-img').src=url;document.getElementById('phone-modal').classList.add('active');}
+function closePhonePreview(){document.getElementById('phone-modal').classList.remove('active');}
+function confirmPhoneVote(){closePhonePreview();}
+async function submitVote(){if(selectedVote===null){showToast('⚠ Выбери переход!');return;}var res=await fetch(SRV+'/api/vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID,user_id:myId,voted_for:selectedVote,game:'phone'})});var data=await res.json();if(data.status==='error'){showToast('⚠ '+data.message);return;}if(data.all_voted){showResults(data.winner_name);}else{showToast('✅ Выбор сделан! Ожидаем других...');var ci=setInterval(async function(){var sr=await fetch(SRV+'/api/state?session_id='+SID);var s=await sr.json();if(s.all_voted||s.phase==='results'){clearInterval(ci);showResults(s.winner_name);}},1500);}}
+function showResults(winnerName){document.getElementById('winner-text').textContent=winnerName||'Игрок 1 → Игрок 2';showScreen('results');}
+function finishGame(){if(roundVoted)return;roundVoted=true;document.getElementById('btn-finish').disabled=true;document.getElementById('btn-finish').textContent='⏳ Ожидание...';var scores={};scores[myName]=2;window.parent.postMessage({type:'game-complete',scores:scores},'*');}
+window.addEventListener('DOMContentLoaded',function(){loadGame();});
+</script>
+</body>
+</html>

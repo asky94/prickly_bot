@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ассоциации</title><link rel="stylesheet" href="shared.css">
+    <style>body{background:transparent;padding:0}.phone-frame{box-shadow:none;border:none;border-radius:0;min-height:auto;max-width:100%}.header{display:none}.content{padding:20px 15px;gap:12px}#assoc-input{width:100%;padding:12px;font-family:var(--marker);font-size:18px;border-radius:10px;border:2px solid var(--ink);text-align:center}.big-text{font-size:18px;font-weight:bold;color:var(--ink);line-height:1.4}</style>
+</head>
+<body>
+<div class="phone-frame">
+<div class="toast" id="toast"></div>
+<div class="content">
+<div class="screen active" id="screen-assoc-create"><h1>💭</h1><h2>Ассоциации!</h2><p style="font-family:Arial,sans-serif;font-weight:900;">Тема: <b id="assoc-word">...</b></p><input type="text" id="assoc-input" placeholder="Твоя ассоциация..."><button class="btn btn-primary btn-arial" onclick="submitAssoc()">📝 Отправить</button><p id="assoc-status" style="font-family:var(--marker);color:var(--green);"></p></div>
+<div class="screen" id="screen-waiting"><h1>⏳</h1><h2>Ожидание...</h2><p style="font-family:var(--marker);">Другие игроки пишут ассоциации</p><div class="progress-doodle"><div class="progress-fill" id="waiting-progress" style="width:33%;"></div></div><p style="font-family:var(--marker);font-size:14px;" id="waiting-text">Готово: 1/3</p></div>
+<div class="screen" id="screen-vote"><h1>🗳</h1><h2>Чья ассоциация лучше?</h2><p style="font-family:var(--marker);background:var(--yellow);display:inline-block;padding:4px 12px;border-radius:15px;border:2px dashed var(--ink);margin-bottom:10px;">Тема: <b id="vote-assoc-word">...</b></p><div class="vote-grid" id="vote-grid"></div><button class="btn btn-primary btn-arial" onclick="submitVote()">✅ Голосовать</button></div>
+<div class="screen" id="screen-results"><h1>🏆</h1><h2>Победитель!</h2><p style="font-family:var(--marker);">🥇 <b id="winner-name">...</b></p><p class="big-text" id="winner-text">...</p><p style="font-family:var(--marker);color:var(--prickle);" id="assoc-theme-display"></p><button class="btn btn-primary btn-arial" id="btn-finish" onclick="finishGame()">▶ Следующий раунд</button><button class="btn btn-secondary btn-arial" onclick="goToLobby()">← Назад в лобби</button></div>
+</div>
+</div>
+<script>
+var S=sessionStorage,SRV=S.getItem('server_url')||'https://regroup-lucid-bronco.ngrok-free.dev',SID=S.getItem('session_id')||'test-session',myId=S.getItem('user_id')||'unknown',myName=S.getItem('username')||'Игрок';
+var assocWord='',assocTexts={},players={},selectedVote=null,roundVoted=false;
+async function loadTask(){try{var r=await fetch(SRV+'/api/task?session_id='+SID+'&game_type=assoc&user_id='+myId);var d=await r.json();assocWord=d.task||'Лень';}catch(e){assocWord='Лень';}document.getElementById('assoc-word').textContent=assocWord;}
+function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+function goToLobby(){window.parent.postMessage({type:'go-lobby'},'*');}
+async function submitAssoc(){var text=document.getElementById('assoc-input').value.trim();if(!text){showToast('⚠ Напиши!');return;}document.getElementById('assoc-status').textContent='✅ Отправлено!';await fetch(SRV+'/api/submit-assoc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID,user_id:myId,text:text})});showScreen('waiting');checkAnswers();}
+async function checkAnswers(){var iv=setInterval(async function(){var res=await fetch(SRV+'/api/state?session_id='+SID);var state=await res.json();assocTexts=state.assoc_texts||{};players=state.players||{};var up=Object.keys(assocTexts).length,total=state.players_count||3;document.getElementById('waiting-progress').style.width=Math.round(up/total*100)+'%';document.getElementById('waiting-text').textContent='Готово: '+up+'/'+total;if(state.phase==='voting'||up>=total){clearInterval(iv);renderVoteGrid();showScreen('vote');}},2000);}
+function renderVoteGrid(){
+    var g=document.getElementById('vote-grid');g.innerHTML='';
+    document.getElementById('vote-assoc-word').textContent=assocWord;
+    var keys=Object.keys(assocTexts);
+    for(var i=0;i<keys.length;i++){
+        var uid=keys[i],p=assocTexts[uid],name=p.username||uid,pInfo=players[uid]||{};
+        var avatarHtml=pInfo.avatar?'<img src="'+pInfo.avatar+'" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--ink);margin-right:5px;vertical-align:middle;">':'';
+        g.innerHTML+='<div class="vote-card" data-player="'+uid+'" onclick="'+ (uid===myId?'showToast(\'⚠ За себя нельзя!\')':'selectVote(\''+uid+'\')') +'" style="padding:12px;">'+avatarHtml+'<p style="font-family:var(--marker);font-size:16px;font-weight:bold;">'+name+'</p><p class="big-text">«'+p.text+'»</p></div>';
+    }
+}
+function selectVote(uid){document.querySelectorAll('#vote-grid .vote-card').forEach(function(c){c.classList.remove('selected');});var cards=document.querySelectorAll('#vote-grid .vote-card');for(var i=0;i<cards.length;i++){if(cards[i].dataset.player===uid)cards[i].classList.add('selected');}selectedVote=uid;}
+async function submitVote(){if(!selectedVote){showToast('⚠ Выбери!');return;}var res=await fetch(SRV+'/api/vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SID,user_id:myId,voted_for:selectedVote,game:'assoc'})});var data=await res.json();if(data.status==='error'){showToast('⚠ '+data.message);return;}if(data.all_voted){showResults(data.winner_name);}else{showToast('✅ Выбор сделан! Ожидаем других...');var ci=setInterval(async function(){var sr=await fetch(SRV+'/api/state?session_id='+SID);var s=await sr.json();if(s.all_voted||s.phase==='results'){clearInterval(ci);showResults(s.winner_name);}},1500);}}
+function showResults(winnerName){var displayName=winnerName||'Неизвестный игрок';document.getElementById('winner-name').textContent=displayName;var wp=assocTexts[Object.keys(assocTexts).find(function(k){return assocTexts[k].username===displayName;})]||Object.values(assocTexts).find(function(p){return p.username===displayName;});document.getElementById('winner-text').textContent='«'+(wp?wp.text:'...')+'»';document.getElementById('assoc-theme-display').textContent='Тема: '+assocWord;showScreen('results');}
+function finishGame(){if(roundVoted)return;roundVoted=true;document.getElementById('btn-finish').disabled=true;document.getElementById('btn-finish').textContent='⏳ Ожидание...';var scores={};if(assocTexts[selectedVote])scores[assocTexts[selectedVote].username||selectedVote]=5;window.parent.postMessage({type:'game-complete',scores:scores},'*');}
+window.addEventListener('DOMContentLoaded',async function(){await loadTask();});
+</script>
+</body>
+</html>
