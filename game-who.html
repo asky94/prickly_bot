@@ -23,7 +23,21 @@ var myName=p.get('username')||'Игрок';
 var H={'Content-Type':'application/json','ngrok-skip-browser-warning':'true'};
 
 var whoQuote='',whoCorrect='',allPlayers=[],myGuess=null,roundVoted=false;
-async function loadGame(){try{var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});var state=await r.json();allPlayers=[];for(var uid in state.players){allPlayers.push({id:uid,name:state.players[uid].username||uid,avatar:state.players[uid].avatar});}whoQuote=state.who_quote||'Я никогда не просыпал работу';}catch(e){allPlayers=[{id:'p1',name:'Саша'},{id:'p2',name:'Маша'},{id:'p3',name:'Дима'}];}document.getElementById('who-quote').textContent='«'+whoQuote+'»';renderCards();}
+async function loadGame(){
+    try{
+        var r=await fetch(SRV+'/api/state?session_id='+SID,{headers:{'ngrok-skip-browser-warning':'true'}});
+        var state=await r.json();
+        allPlayers=[];
+        for(var uid in state.players){
+            allPlayers.push({id:uid,name:state.players[uid].username||uid,avatar:state.players[uid].avatar});
+        }
+        whoQuote=state.who_quote||'Я никогда не просыпал работу';
+    }catch(e){
+        allPlayers=[{id:'p1',name:'Саша'},{id:'p2',name:'Маша'},{id:'p3',name:'Дима'}];
+    }
+    document.getElementById('who-quote').textContent='«'+whoQuote+'»';
+    renderCards();
+}
 function renderCards(){var g=document.getElementById('who-grid');g.innerHTML='';var candidates=allPlayers.slice(0,4);for(var i=0;i<candidates.length;i++){var p=candidates[i];var avatarHtml=p.avatar?'<img src="'+p.avatar+'" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid var(--ink);margin-bottom:5px;">':'<div style="width:70px;height:70px;border-radius:50%;background:#457B9D;display:flex;align-items:center;justify-content:center;font-size:30px;color:white;font-family:var(--marker);margin-bottom:5px;">'+(p.name||'?').substr(0,2).toUpperCase()+'</div>';g.innerHTML+='<div class="vote-card" data-player="'+p.id+'" data-name="'+p.name+'" onclick="selectGuess(this,\''+p.id+'\',\''+p.name+'\')">'+avatarHtml+'<p style="font-family:var(--marker);">'+p.name+'</p></div>';}}
 function selectGuess(card,id,name){document.querySelectorAll('#who-grid .vote-card').forEach(function(c){c.classList.remove('selected');});card.classList.add('selected');myGuess=name;}
 function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
