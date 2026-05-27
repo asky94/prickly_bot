@@ -24,7 +24,16 @@ var myName=p.get('username')||'Игрок';
 var H={'Content-Type':'application/json','ngrok-skip-browser-warning':'true'};
 
 var assocWord='',assocTexts={},players={},selectedVote=null,roundVoted=false;
-async function loadTask(){try{var r=await fetch(SRV+'/api/task?session_id='+SID+'&game_type=assoc&user_id='+myId,{headers:{'ngrok-skip-browser-warning':'true'}});var d=await r.json();assocWord=d.task||'Лень';}catch(e){assocWord='Лень';}document.getElementById('assoc-word').textContent=assocWord;}
+async function loadTask(){
+    try{
+        var r=await fetch(SRV+'/api/task?session_id='+SID+'&game_type=assoc&user_id='+myId,{headers:{'ngrok-skip-browser-warning':'true'}});
+        var d=await r.json();
+        assocWord=d.task||'Лень';
+    }catch(e){
+        assocWord='Лень';
+    }
+    document.getElementById('assoc-word').textContent=assocWord;
+}
 function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});var t=document.getElementById('screen-'+id);if(t){t.classList.add('active','bounce-in');setTimeout(function(){t.classList.remove('bounce-in');},500);}}
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 function goToLobby(){window.parent.postMessage({type:'go-lobby'},'*');}
